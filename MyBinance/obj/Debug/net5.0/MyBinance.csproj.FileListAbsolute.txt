@@ -398,7 +398,6 @@ C:\Users\aqssass\Documents\GitHub\MyBinance\MyBinance\bin\Debug\net5.0\wwwroot\_
 C:\Users\aqssass\Documents\GitHub\MyBinance\MyBinance\bin\Debug\net5.0\wwwroot\_framework\icudt_EFIGS.dat
 C:\Users\aqssass\Documents\GitHub\MyBinance\MyBinance\bin\Debug\net5.0\wwwroot\_framework\icudt_no_CJK.dat
 C:\Users\aqssass\Documents\GitHub\MyBinance\MyBinance\bin\Debug\net5.0\wwwroot\_framework\dotnet.5.0.1.js
-C:\Users\aqssass\Documents\GitHub\MyBinance\MyBinance\obj\Debug\net5.0\MyBinance.csprojAssemblyReference.cache
 C:\Users\aqssass\Documents\GitHub\MyBinance\MyBinance\obj\Debug\net5.0\MyBinance.GeneratedMSBuildEditorConfig.editorconfig
 C:\Users\aqssass\Documents\GitHub\MyBinance\MyBinance\obj\Debug\net5.0\MyBinance.AssemblyInfoInputs.cache
 C:\Users\aqssass\Documents\GitHub\MyBinance\MyBinance\obj\Debug\net5.0\MyBinance.AssemblyInfo.cs

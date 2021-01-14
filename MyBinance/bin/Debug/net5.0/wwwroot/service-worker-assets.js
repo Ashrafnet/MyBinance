@@ -1,7 +1,7 @@
 ﻿self.assetsManifest = {
   "assets": [
     {
-      "hash": "sha256-eEFj5uDFwbsz93Az6HIf9b4gx9xqGvL8mFW49Gm5l9Y=",
+      "hash": "sha256-7UM80CVwvnwYrXQrwoeI9b51B7lXCigkVIip3U0OH3Q=",
       "url": "_framework\/blazor.boot.json"
     },
     {
@@ -785,11 +785,11 @@
       "url": "_framework\/dotnet.5.0.1.js"
     },
     {
-      "hash": "sha256-+xrMvE+upCeZpHpCQH+CphJ\/R6kFvuo8H2P0OIZQMwk=",
+      "hash": "sha256-Sz9jbXhLarn6dnEmdPTEGfSka4GRoNtOtlGPaj0Tnac=",
       "url": "_framework\/MyBinance.dll"
     },
     {
-      "hash": "sha256-w0xxvdls4rA4lPED88h4w386jVvORPAmcBKhFCat7j8=",
+      "hash": "sha256-oKfyQiIXh93O16vz+ki6JLGYmzrnuwnqcK71DEllaN4=",
       "url": "_framework\/MyBinance.pdb"
     },
     {
@@ -1653,5 +1653,5 @@
       "url": "MyBinance.bundle.scp.css"
     }
   ],
-  "version": "cVtobFO3"
+  "version": "DLqQGJ+l"
 };
