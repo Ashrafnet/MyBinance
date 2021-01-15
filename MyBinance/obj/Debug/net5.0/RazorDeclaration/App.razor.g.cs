@@ -82,6 +82,62 @@ using MyBinance.Shared;
 #line default
 #line hidden
 #nullable disable
+#nullable restore
+#line 11 "C:\Users\aqssass\Documents\GitHub\MyBinance\MyBinance\_Imports.razor"
+using Binance;
+
+#line default
+#line hidden
+#nullable disable
+#nullable restore
+#line 12 "C:\Users\aqssass\Documents\GitHub\MyBinance\MyBinance\_Imports.razor"
+using Binance.Net;
+
+#line default
+#line hidden
+#nullable disable
+#nullable restore
+#line 13 "C:\Users\aqssass\Documents\GitHub\MyBinance\MyBinance\_Imports.razor"
+using Binance.Net.Interfaces;
+
+#line default
+#line hidden
+#nullable disable
+#nullable restore
+#line 14 "C:\Users\aqssass\Documents\GitHub\MyBinance\MyBinance\_Imports.razor"
+using Binance.Net.Objects.Spot;
+
+#line default
+#line hidden
+#nullable disable
+#nullable restore
+#line 15 "C:\Users\aqssass\Documents\GitHub\MyBinance\MyBinance\_Imports.razor"
+using Binance.Net.Objects.Spot.MarketStream;
+
+#line default
+#line hidden
+#nullable disable
+#nullable restore
+#line 16 "C:\Users\aqssass\Documents\GitHub\MyBinance\MyBinance\_Imports.razor"
+using Binance.Net.Objects.Spot.SpotData;
+
+#line default
+#line hidden
+#nullable disable
+#nullable restore
+#line 17 "C:\Users\aqssass\Documents\GitHub\MyBinance\MyBinance\_Imports.razor"
+using CryptoExchange.Net.Authentication;
+
+#line default
+#line hidden
+#nullable disable
+#nullable restore
+#line 18 "C:\Users\aqssass\Documents\GitHub\MyBinance\MyBinance\_Imports.razor"
+using MyBinance.App_Code;
+
+#line default
+#line hidden
+#nullable disable
     public partial class App : Microsoft.AspNetCore.Components.ComponentBase
     {
         #pragma warning disable 1998

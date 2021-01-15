@@ -1,8 +1,16 @@
 ﻿self.assetsManifest = {
   "assets": [
     {
-      "hash": "sha256-7UM80CVwvnwYrXQrwoeI9b51B7lXCigkVIip3U0OH3Q=",
+      "hash": "sha256-2sktwkek2bkrlIukb7nbupfYhkLB\/1rtL\/BCaOD\/CJQ=",
       "url": "_framework\/blazor.boot.json"
+    },
+    {
+      "hash": "sha256-2Dtu1am1OI9j\/akJLiAN4QGuEa1fQ5S8o2vJe8QvTv0=",
+      "url": "_framework\/Binance.Net.dll"
+    },
+    {
+      "hash": "sha256-1nxj02T5eOdh1eMNmDeser3S\/hWNh4bSz5U6Ffq5AB0=",
+      "url": "_framework\/CryptoExchange.Net.dll"
     },
     {
       "hash": "sha256-l3ZLL\/J5Qez21fDEDw2b32hOtlT11ly1GmmKGPMfMWQ=",
@@ -93,8 +101,20 @@
       "url": "_framework\/Microsoft.JSInterop.WebAssembly.dll"
     },
     {
+      "hash": "sha256-mRd6TL4DYldo1ko9czkjEDcoiPdMPrJxz3dekwV6OOY=",
+      "url": "_framework\/Newtonsoft.Json.dll"
+    },
+    {
+      "hash": "sha256-t0H778hXbzBd8kSRj6PTuxZzU7P8RKLLZm7lIIq5Uyc=",
+      "url": "_framework\/SuperSocket.ClientEngine.dll"
+    },
+    {
       "hash": "sha256-3ET+mpR7F058YRj9YaLHOVXBqOW6iUxtIpeiKPYw4PA=",
       "url": "_framework\/System.IO.Pipelines.dll"
+    },
+    {
+      "hash": "sha256-u69iLMP0tRLGwTGrfMrS22sGYsAzZ6\/BDxqrPe\/178s=",
+      "url": "_framework\/WebSocket4Net.dll"
     },
     {
       "hash": "sha256-JWW\/4VOX8B0ELTP\/v4O7wlgWY8ZyVIv0BTIRIv2TJBw=",
@@ -785,16 +805,24 @@
       "url": "_framework\/dotnet.5.0.1.js"
     },
     {
-      "hash": "sha256-Sz9jbXhLarn6dnEmdPTEGfSka4GRoNtOtlGPaj0Tnac=",
+      "hash": "sha256-F8FQJiJJ3KHKH1d0Ypb0iljQZLQs4R17HB1dX+1aXLc=",
       "url": "_framework\/MyBinance.dll"
     },
     {
-      "hash": "sha256-oKfyQiIXh93O16vz+ki6JLGYmzrnuwnqcK71DEllaN4=",
+      "hash": "sha256-ozb5vR83jhgKk37874Ptj4LxX0iQUHKIkET9B9P+QcE=",
       "url": "_framework\/MyBinance.pdb"
     },
     {
       "hash": "sha256-sYA0L2visb01XnqGT7epPVSXTZJFhpQ4PMDzhF\/rngo=",
       "url": "_framework\/blazor.webassembly.js"
+    },
+    {
+      "hash": "sha256-+4JgZZc+MAvALzVlzijKYaC1YZIhEbI+SBczCm3heZ0=",
+      "url": "_framework\/Binance.Net.dll.gz"
+    },
+    {
+      "hash": "sha256-nzw2BqkjNzoSiwc6fNVTqpkMJ1R7Hmh5wL5XMwPh6AA=",
+      "url": "_framework\/CryptoExchange.Net.dll.gz"
     },
     {
       "hash": "sha256-rvNjNj5vLMSmS3u\/FTX0h3HB2foBiOLoDIYRMyz9bCg=",
@@ -885,8 +913,20 @@
       "url": "_framework\/Microsoft.JSInterop.WebAssembly.dll.gz"
     },
     {
+      "hash": "sha256-fldAulhzrJUueU2XoYsUaWR0WuFxmPshaLLiV7qxGz0=",
+      "url": "_framework\/Newtonsoft.Json.dll.gz"
+    },
+    {
+      "hash": "sha256-CEBC9cHjjI9jJvD5swAzVDJIeJpCftI5oyxCHyIPtnE=",
+      "url": "_framework\/SuperSocket.ClientEngine.dll.gz"
+    },
+    {
       "hash": "sha256-bKUyqPBN97RAML0EFDOqEqLzHp6KbO5DKcF0CX\/cmSU=",
       "url": "_framework\/System.IO.Pipelines.dll.gz"
+    },
+    {
+      "hash": "sha256-C2VV69ocei3W7S3nykLaCH2FGTA6LZThmzgStXUjaIY=",
+      "url": "_framework\/WebSocket4Net.dll.gz"
     },
     {
       "hash": "sha256-3uvAz7RWk7L5slN5U9bOseBg000S7tVGAOQ\/Ayzl\/P8=",
@@ -1633,7 +1673,7 @@
       "url": "icon-512.png"
     },
     {
-      "hash": "sha256-fHZwJVMpLaL\/0GQOpNW+Rusxsvk0m51ejsCFJ\/Mz0sU=",
+      "hash": "sha256-ce3EH818PLLiWlWZq9Fz5QqiMuE\/253fCS0DPEjVwdE=",
       "url": "index.html"
     },
     {
@@ -1653,5 +1693,5 @@
       "url": "MyBinance.bundle.scp.css"
     }
   ],
-  "version": "DLqQGJ+l"
+  "version": "0fX73kgI"
 };

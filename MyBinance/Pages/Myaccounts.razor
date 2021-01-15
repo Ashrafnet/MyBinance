@@ -1,0 +1,232 @@
+﻿@page "/myaccounts"
+@inject HttpClient Http
+@inject UserSettingsProvider UserSettingsProvider
+@inject IJSRuntime JS;
+@*//@implements IDisposable*@
+
+<h1>My Binance Accounts</h1>
+
+<p>This component demonstrates fetching data from the server.</p>
+
+@if (state?.ApiKeys == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{<button class="btn btn-primary" @onclick="OnAddButton">Add Account..</button>
+    <p></p>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Api Name</th>
+                <th>USDT Balance</th>
+                <th>BTC Balance</th>                
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var keyInfo in state.ApiKeys)
+            {
+                <tr>
+                    <td><span class="font-weight-bold">@keyInfo.APIKeyName</span> </td>
+                    <td>@keyInfo.APIKey</td>                    
+                    <td>@keyInfo.AddedDate</td>
+
+                    <td><button  @onclick="@(e => OnDeleteButton( @keyInfo.APIKey))" class="btn btn-sm btn-danger" title="Delete">Delete</button></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private UserSettings state = null;
+
+    async void OnAddButton()
+    {
+        state.ApiKeys.Add(new APIKeyInfo { APIKey = "12345678", AddedDate = DateTime.Now, APIKeyName = "My Binance " + state.ApiKeys.Count, APISecretKey = "*****" });
+        await UserSettingsProvider.Save();
+    }
+
+    async void OnDeleteButton(string key)
+    {
+
+
+        if (state?.ApiKeys != null)
+        {
+            var k = state.ApiKeys.FirstOrDefault(s => s.APIKey == key);
+            state.ApiKeys.Remove(k);
+
+            await UserSettingsProvider.Save();
+        }
+    }
+    protected override async Task OnInitializedAsync()
+    {
+
+        UserSettingsProvider.AutoSave = true;
+        //  UserSettingsProvider.Changed += UserSettingsChanged;
+        await Refresh();
+
+    }
+
+
+
+    private async Task Refresh()
+    {
+        state = await UserSettingsProvider.Get();
+        BinanceAccountManager binanceAccountManager = new BinanceAccountManager();
+        binanceAccountManager.StartWork();
+    }
+
+
+
+
+
+
+
+
+    public class BinanceAccountManager
+    {
+        public List<BinanceAccount> BinanceAccounts { get; set; } = new List<BinanceAccount>();
+        Dictionary<string, IBinanceMiniTick> SymbolPrices = new Dictionary<string, IBinanceMiniTick>();
+
+        BinanceSocketClient socketClient = new BinanceSocketClient();
+        public void StartWork()
+        {
+
+            _ = socketClient.Spot.SubscribeToAllSymbolMiniTickerUpdatesAsync(symboles =>
+            {
+
+                if (symboles != null && symboles.Count() > 0)
+                {
+                    foreach (var item in symboles)
+                        SymbolPrices[item.Symbol] = item;
+                    
+                    //refreshPrices();
+                }
+
+            });
+        }
+
+        (decimal USDT, decimal BTC) GetSymbolPrice(string symbol)
+        {
+            if (string.IsNullOrWhiteSpace(symbol)) return (0, 0);
+            if (SymbolPrices == null || SymbolPrices.Count < 1) return (0, 0);
+            decimal? LastPrice_usdt = 0;
+            decimal? LastPrice_btc = 0;
+
+            if (symbol == "USDT")
+            {
+                symbol = "BTC" + symbol;
+                if (SymbolPrices.ContainsKey(symbol))
+                    LastPrice_btc = 1 / SymbolPrices[symbol]?.LastPrice;
+                LastPrice_usdt = 1;
+            }
+            else if (symbol == "BTC")
+            {
+                symbol = "USDT" + symbol;
+                if (SymbolPrices.ContainsKey(symbol))
+                    LastPrice_usdt = 1 / SymbolPrices[symbol]?.LastPrice;
+                LastPrice_btc = 1;
+            }
+            else
+            {
+                var _symbol = symbol + "USDT";
+                if (SymbolPrices.ContainsKey(_symbol))
+                    LastPrice_usdt = SymbolPrices[_symbol]?.LastPrice;
+
+                _symbol = symbol + "BTC";
+                if (SymbolPrices.ContainsKey(_symbol))
+                    LastPrice_btc = SymbolPrices[_symbol]?.LastPrice;
+
+                if (symbol == "BTCUSDT")
+                {
+                    if (SymbolPrices.ContainsKey(symbol))
+                        LastPrice_usdt = SymbolPrices[symbol]?.LastPrice;
+                }
+            }
+
+            return (LastPrice_usdt ?? 0, LastPrice_btc ?? 0);
+        }
+
+        (decimal USDT, decimal BTC) CalcBalances(IEnumerable<BinanceBalance> balances)
+        {
+            decimal USDT = 0; decimal BTC = 0;
+            foreach (var item in balances)
+            {
+                if (item.Total <= 0) continue;
+                decimal? LastPrice_usdt = 0;
+                decimal? LastPrice_btc = 0;
+
+                (LastPrice_usdt, LastPrice_btc) = GetSymbolPrice(item.Asset);
+
+                LastPrice_usdt = LastPrice_usdt * item.Total;
+                LastPrice_btc = LastPrice_btc * item.Total;
+
+                USDT += LastPrice_usdt ?? 0;
+                BTC += LastPrice_btc ?? 0;
+            }
+            return (USDT, BTC);
+        }
+
+    }
+    public class BinanceAccount
+    {
+        public string ApiKey { get; set; }
+        public string SecretKey { get; set; }
+        public string Comment { get; set; }
+        BinanceClient _Client = null;
+        public BinanceClient Client
+        {
+            get
+            {
+                if (_Client == null && !string.IsNullOrWhiteSpace(ApiKey) && !string.IsNullOrWhiteSpace(SecretKey))
+                    _Client = new BinanceClient(new BinanceClientOptions
+                    {
+                        ApiCredentials = new ApiCredentials(ApiKey, SecretKey)
+                    });
+                return _Client;
+            }
+        }
+
+        public event EventHandler UserUpdates;
+        // public Action<Binance.Net.Objects.Spot.UserStream.BinanceStreamBalanceUpdate> UserUpdates;
+
+        internal void StartStream()
+        {
+            if (Client == null)
+                throw new Exception("You have to set the API Keys.");
+
+            var startResult = _Client.Spot.UserStream.StartUserStream();
+            if (!startResult.Success)
+                throw new Exception($"Failed to start user stream: {startResult.Error}");
+
+            var socketClient = new BinanceSocketClient();
+
+            socketClient.Spot.SubscribeToUserDataUpdates(startResult.Data,
+                accountUpdate =>
+                {
+
+                    var b = accountUpdate.Balances.ToList(); // Handle account info update
+
+                },
+                orderUpdate =>
+                { // Handle order update
+                    UserUpdates?.Invoke(orderUpdate, null);
+                },
+                ocoUpdate =>
+                { // Handle oco order update
+                },
+                positionUpdate =>
+                { // Handle account position update
+                },
+                balanceUpdate =>
+
+                { // Handle balance update
+                    UserUpdates?.Invoke(balanceUpdate, null);
+                    //UserUpdates.Invoke(balanceUpdate);
+                }
+                );
+        }
+    }
+}

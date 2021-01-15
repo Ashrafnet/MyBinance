@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html>
 
 <head>
@@ -11,6 +11,9 @@
     <link href="MyBinance.styles.css" rel="stylesheet" />
     <link href="manifest.json" rel="manifest" />
     <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png" />
+
+    
+
 </head>
 
 <body>
@@ -23,6 +26,21 @@
     </div>
     <script src="_framework/blazor.webassembly.js"></script>
     <script>navigator.serviceWorker.register('service-worker.js');</script>
+    <script>
+        function BlazorSetLocalStorage(key, value) {
+            localStorage.setItem(key, value);
+        }
+
+        function BlazorGetLocalStorage(key) {
+            return localStorage.getItem(key);
+        }
+
+        function BlazorRegisterStorageEvent(component) {
+            window.addEventListener("storage", async e => {
+                await component.invokeMethodAsync("OnStorageUpdated", e.key);
+            });
+        }
+    </script>
 </body>
 
 </html>

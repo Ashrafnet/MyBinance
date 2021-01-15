@@ -7,6 +7,8 @@
   "linkerEnabled": false,
   "resources": {
     "assembly": {
+      "Binance.Net.dll": "sha256-2Dtu1am1OI9j\/akJLiAN4QGuEa1fQ5S8o2vJe8QvTv0=",
+      "CryptoExchange.Net.dll": "sha256-1nxj02T5eOdh1eMNmDeser3S\/hWNh4bSz5U6Ffq5AB0=",
       "Microsoft.AspNetCore.Authorization.dll": "sha256-l3ZLL\/J5Qez21fDEDw2b32hOtlT11ly1GmmKGPMfMWQ=",
       "Microsoft.AspNetCore.Components.dll": "sha256-EPSZDBpWHRQ8gG6\/z95pneA5\/LyXLj2W4QNUXpEqKk4=",
       "Microsoft.AspNetCore.Components.Forms.dll": "sha256-D1w9d3k8\/YsRHjUWE8r0mcincGLiFMnCKofplsO+ND8=",
@@ -29,7 +31,10 @@
       "Microsoft.Extensions.Primitives.dll": "sha256-f2PgoftqEkKRuuiAk6S1MHygOuqZBHzB0HOB3vR93TU=",
       "Microsoft.JSInterop.dll": "sha256-PsxLxuAZQnnskOEiWpsK6H6G5SM51oX6qlgmie2bedM=",
       "Microsoft.JSInterop.WebAssembly.dll": "sha256-vKk9KOHougzhyFaVJlH5erwr52K\/i9Gw8flNlecX8Wc=",
+      "Newtonsoft.Json.dll": "sha256-mRd6TL4DYldo1ko9czkjEDcoiPdMPrJxz3dekwV6OOY=",
+      "SuperSocket.ClientEngine.dll": "sha256-t0H778hXbzBd8kSRj6PTuxZzU7P8RKLLZm7lIIq5Uyc=",
       "System.IO.Pipelines.dll": "sha256-3ET+mpR7F058YRj9YaLHOVXBqOW6iUxtIpeiKPYw4PA=",
+      "WebSocket4Net.dll": "sha256-u69iLMP0tRLGwTGrfMrS22sGYsAzZ6\/BDxqrPe\/178s=",
       "Microsoft.CSharp.dll": "sha256-JWW\/4VOX8B0ELTP\/v4O7wlgWY8ZyVIv0BTIRIv2TJBw=",
       "Microsoft.VisualBasic.Core.dll": "sha256-\/9kBfwlTqN2R\/tiMVV76A72VsrUfSVAYs2v\/5mi38Mk=",
       "Microsoft.VisualBasic.dll": "sha256-WrQGoCtjVGnegfi0WxOTvOc0kZXDcuJ\/tg3XRe6YPlw=",
@@ -195,11 +200,11 @@
       "mscorlib.dll": "sha256-FWPx51huC\/WJLkKCgoTEa5pzm8+4Aucxg0YuOiuOwkQ=",
       "netstandard.dll": "sha256-2ba2qAAtNUX9Qh5PFXhTMtcD\/Nra\/wyG197\/wrnxElI=",
       "System.Private.CoreLib.dll": "sha256-4wsl1v32v74UB0CTQ6+AdUTdM+9C1VraomgeCjb4Wug=",
-      "MyBinance.dll": "sha256-Sz9jbXhLarn6dnEmdPTEGfSka4GRoNtOtlGPaj0Tnac="
+      "MyBinance.dll": "sha256-F8FQJiJJ3KHKH1d0Ypb0iljQZLQs4R17HB1dX+1aXLc="
     },
     "lazyAssembly": null,
     "pdb": {
-      "MyBinance.pdb": "sha256-oKfyQiIXh93O16vz+ki6JLGYmzrnuwnqcK71DEllaN4="
+      "MyBinance.pdb": "sha256-ozb5vR83jhgKk37874Ptj4LxX0iQUHKIkET9B9P+QcE="
     },
     "runtime": {
       "dotnet.timezones.blat": "sha256-nXByiCO4+RYyh+A88TSSZDwAJMF7M7Up\/h6dfAA19C8=",
