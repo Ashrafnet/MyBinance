@@ -4,7 +4,7 @@ import type { AccountMeta, BalanceRow, TickerRow } from '../domain/types'
 import { cacheGetBalances, cacheGetSyncMeta, cacheGetTickers, getSettings, listAccounts } from '../storage/cache'
 import { getFavorites, setFavorites, toggleFavorite } from '../storage/favorites'
 import { syncAll } from '../services/sync'
-import { formatUnitPrice, sumBtc, sumUsdt, unitPriceUsdt } from '../services/valuation'
+import { formatMoney, formatUnitPrice, sumBtc, sumUsdt, unitPriceUsdt } from '../services/valuation'
 import { useOnline } from '../app/OnlineContext'
 import { Toast } from '../components/Toast'
 import { AppSelect } from '../components/AppSelect'
@@ -232,7 +232,7 @@ export function PortfolioScreen() {
             </div>
           </div>
           <div className="holding-side">
-            <strong>${r.usdtValue.toFixed(2)}</strong>
+            <strong>{formatMoney(r.usdtValue)}</strong>
             <span>{share.toFixed(1)}% of bag</span>
             <span className="order-chevron">{expanded ? '▴' : '▾'}</span>
           </div>
@@ -243,7 +243,7 @@ export function PortfolioScreen() {
             <div className="order-detail-grid">
               <div>
                 <em>USD value</em>
-                <strong>${r.usdtValue.toFixed(2)}</strong>
+                <strong>{formatMoney(r.usdtValue)}</strong>
               </div>
               <div>
                 <em>BTC value</em>
@@ -311,7 +311,7 @@ export function PortfolioScreen() {
         <div className="balance-hero-top">
           <div>
             <p className="eyebrow light">Total balance</p>
-            <div className="hero-total light">${total.toFixed(2)}</div>
+            <div className="hero-total light">{formatMoney(total)}</div>
             <p className="hero-sub light">{btc.toFixed(6)} BTC</p>
           </div>
           <button type="button" className="fab-refresh" disabled={!online || busy} onClick={() => void refresh()}>
@@ -419,7 +419,7 @@ export function PortfolioScreen() {
                   <div className="asset-values">
                     {held ? (
                       <>
-                        <strong>${item.balance!.usdtValue.toFixed(2)}</strong>
+                        <strong>{formatMoney(item.balance!.usdtValue)}</strong>
                         <span className={item.balance!.usdtValue >= 0 ? 'up' : 'down'}>
                           {item.balance!.btcValue.toFixed(6)} BTC
                         </span>

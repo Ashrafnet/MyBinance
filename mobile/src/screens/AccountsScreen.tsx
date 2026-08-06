@@ -16,6 +16,7 @@ import { Toast } from '../components/Toast'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { sumUsdt } from '../services/valuation'
 import { Capacitor } from '@capacitor/core'
+import { formatMoney } from '../services/valuation'
 import { formatAbsoluteTime, formatHumanTime } from '../utils/time'
 
 type AccountView = {
@@ -198,7 +199,7 @@ export function AccountsScreen() {
                 </div>
                 <div className="account-side">
                   <Sparkline values={spark} up={sparkUp} />
-                  <strong className={sparkUp ? 'up' : 'down'}>${usdt.toFixed(2)}</strong>
+                  <strong className={sparkUp ? 'up' : 'down'}>{formatMoney(usdt)}</strong>
                 </div>
               </button>
               <button

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatUnitPrice, unitPriceUsdt, valueBalances } from './valuation'
+import { formatMoney, formatUnitPrice, unitPriceUsdt, valueBalances } from './valuation'
 
 describe('valueBalances', () => {
   it('values USDT and BTC via BTCUSDT', () => {
@@ -26,9 +26,18 @@ describe('unitPriceUsdt', () => {
 })
 
 describe('formatUnitPrice', () => {
-  it('picks decimals by magnitude', () => {
+  it('picks decimals by magnitude and uses thousands separators', () => {
     expect(formatUnitPrice(65000)).toMatch(/65/)
+    expect(formatUnitPrice(65000)).toContain(',')
     expect(formatUnitPrice(1.234)).toBe('1.23')
     expect(formatUnitPrice(0.0749)).toBe('0.0749')
+  })
+})
+
+describe('formatMoney', () => {
+  it('formats USD with thousands separators', () => {
+    expect(formatMoney(15488.17)).toBe('$15,488.17')
+    expect(formatMoney(-1200)).toBe('-$1,200.00')
+    expect(formatMoney(25.5, { signed: true })).toBe('+$25.50')
   })
 })

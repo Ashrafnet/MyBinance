@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { AccountMeta, ExchangeId } from '../domain/types'
 import { cacheGetBalances, cacheGetTickers, listAccounts } from '../storage/cache'
-import { formatUnitPrice, sumBtc, sumUsdt } from '../services/valuation'
+import { formatMoney, formatUnitPrice, sumBtc, sumUsdt } from '../services/valuation'
 import { AssetIcon } from '../components/AssetIcon'
 
 export function SummaryScreen() {
@@ -61,7 +61,7 @@ export function SummaryScreen() {
 
       <section className="balance-hero">
         <p className="eyebrow light">Total Spot value</p>
-        <div className="hero-total light">${usdt.toFixed(2)}</div>
+        <div className="hero-total light">{formatMoney(usdt)}</div>
         <p className="hero-sub light">{btc.toFixed(6)} BTC</p>
       </section>
 

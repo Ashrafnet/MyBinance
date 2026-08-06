@@ -336,7 +336,7 @@ export function LiveScreen() {
                   <span>Tap for chart</span>
                 </div>
                 <div className="asset-values">
-                  <strong>{t.last}</strong>
+                  <strong>{formatUnitPrice(t.last)}</strong>
                   <span className={rowUp ? 'up' : 'down'}>
                     {rowUp ? '+' : ''}
                     {t.changePct24h.toFixed(2)}%

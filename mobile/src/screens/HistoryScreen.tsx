@@ -6,6 +6,7 @@ import { useOnline } from '../app/OnlineContext'
 import { AppSelect } from '../components/AppSelect'
 import { AssetIcon } from '../components/AssetIcon'
 import { Toast } from '../components/Toast'
+import { formatMoney } from '../services/valuation'
 import { formatAbsoluteDate, formatAbsoluteTime, formatHumanDate, formatHumanTime } from '../utils/time'
 
 const DAY_MS = 24 * 60 * 60 * 1000
@@ -390,12 +391,12 @@ export function HistoryScreen() {
                       ? `${assetCount} asset${assetCount === 1 ? '' : 's'}`
                       : 'Daily snapshot'}
                     {delta != null
-                      ? ` · ${up ? '+' : ''}$${Math.abs(delta).toFixed(2)} vs prior`
+                      ? ` · ${formatMoney(delta, { signed: true })} vs prior`
                       : ''}
                   </span>
                 </div>
                 <div className="history-side">
-                  <strong>${card.usdtValue.toFixed(2)}</strong>
+                  <strong>{formatMoney(card.usdtValue)}</strong>
                   {deltaPct != null ? (
                     <span className={up ? 'up' : 'down'}>
                       {up ? '+' : ''}
@@ -425,7 +426,7 @@ export function HistoryScreen() {
                   <div className="order-detail-grid plain">
                     <div>
                       <em>Total value</em>
-                      <strong>${card.usdtValue.toFixed(2)}</strong>
+                      <strong>{formatMoney(card.usdtValue)}</strong>
                     </div>
                     <div>
                       <em>BTC value</em>
@@ -436,7 +437,7 @@ export function HistoryScreen() {
                       <strong className={delta == null ? '' : up ? 'up' : 'down'}>
                         {delta == null
                           ? 'First in list'
-                          : `${up ? '+' : ''}$${delta.toFixed(2)}${
+                          : `${formatMoney(delta, { signed: true })}${
                               deltaPct != null ? ` (${up ? '+' : ''}${deltaPct.toFixed(2)}%)` : ''
                             }`}
                       </strong>
@@ -482,7 +483,7 @@ export function HistoryScreen() {
                                 {a.assets.length ? ` · ${a.assets.length} assets` : ''}
                               </span>
                             </div>
-                            <strong>${a.usdtValue.toFixed(2)}</strong>
+                            <strong>{formatMoney(a.usdtValue)}</strong>
                           </div>
                         ))}
                       </div>
@@ -529,7 +530,7 @@ export function HistoryScreen() {
                                 </div>
                               </div>
                               <div className="history-asset-values">
-                                <strong>${a.usdtValue.toFixed(2)}</strong>
+                                <strong>{formatMoney(a.usdtValue)}</strong>
                                 <span>{a.btcValue > 0 ? `${a.btcValue.toFixed(6)} BTC` : '—'}</span>
                               </div>
                             </div>

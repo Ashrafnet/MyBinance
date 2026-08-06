@@ -16,6 +16,7 @@ import { ConfirmDialog } from '../components/ConfirmDialog'
 import { AssetIcon } from '../components/AssetIcon'
 import { AppSelect } from '../components/AppSelect'
 import { syncAccount } from '../services/sync'
+import { formatMoney, formatUnitPrice } from '../services/valuation'
 import { formatAbsoluteTime, formatHumanTime } from '../utils/time'
 
 export function OrdersScreen() {
@@ -298,7 +299,7 @@ export function OrdersScreen() {
                       <AssetIcon asset={t.symbol} />
                       <span className="symbol-suggest-main">
                         <strong>{t.symbol}</strong>
-                        <span>${t.last}</span>
+                        <span>${formatUnitPrice(t.last)}</span>
                       </span>
                     </button>
                   </li>
@@ -402,14 +403,14 @@ export function OrdersScreen() {
                     </div>
                     <span className="order-summary-line">
                       {typeLabel} · {formatQty(o.filledQuantity)} of {formatQty(o.quantity)} done
-                      {o.price != null ? ` · $${formatQty(o.price)} each` : ' · market price'}
+                      {o.price != null ? ` · $${formatUnitPrice(o.price)} each` : ' · market price'}
                     </span>
                     <div className="order-fill-track" aria-hidden="true">
                       <div className="order-fill-bar" style={{ width: `${fillPct}%` }} />
                     </div>
                   </div>
                   <div className="order-summary-side">
-                    <strong>{orderSizeUsd != null ? `$${orderSizeUsd.toFixed(2)}` : '—'}</strong>
+                    <strong>{orderSizeUsd != null ? formatMoney(orderSizeUsd) : '—'}</strong>
                     <span className="order-side-caption">Order size</span>
                     <span className="order-chevron">{expanded ? '▴' : '▾'}</span>
                   </div>
@@ -420,10 +421,10 @@ export function OrdersScreen() {
                     <div className="order-hero-stat">
                       <div>
                         <em>Order size</em>
-                        <strong>{orderSizeUsd != null ? `$${orderSizeUsd.toFixed(2)}` : 'Uses market price'}</strong>
+                        <strong>{orderSizeUsd != null ? formatMoney(orderSizeUsd) : 'Uses market price'}</strong>
                         <p>
                           {o.price != null
-                            ? `${formatQty(o.quantity)} coins × $${formatQty(o.price)}`
+                            ? `${formatQty(o.quantity)} coins × $${formatUnitPrice(o.price)}`
                             : 'Filled at whatever the market price is when it executes'}
                         </p>
                       </div>
@@ -432,7 +433,7 @@ export function OrdersScreen() {
                         <strong>{fillPct.toFixed(0)}% done</strong>
                         <p>
                           {formatQty(o.filledQuantity)} filled · {formatQty(remaining)} left
-                          {filledUsd != null ? ` · $${filledUsd.toFixed(2)} so far` : ''}
+                          {filledUsd != null ? ` · ${formatMoney(filledUsd)} so far` : ''}
                         </p>
                       </div>
                     </div>
@@ -444,7 +445,7 @@ export function OrdersScreen() {
                       </div>
                       <div>
                         <em>{o.type === 'limit' ? 'Your limit price' : 'Price type'}</em>
-                        <strong>{o.price != null ? `$${formatQty(o.price)}` : 'Market'}</strong>
+                        <strong>{o.price != null ? `$${formatUnitPrice(o.price)}` : 'Market'}</strong>
                       </div>
                       <div>
                         <em>Already filled</em>

@@ -46,10 +46,49 @@ export function unitPriceUsdt(
   return null
 }
 
+/** Insert commas every 3 digits (ASCII), independent of Intl/locale quirks. */
+function withThousands(intDigits: string): string {
+  return intDigits.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+}
+
+function formatFixedGrouped(n: number, digits: number): string {
+  const fixed = Math.abs(n).toFixed(digits)
+  const [intPart, frac] = fixed.split('.')
+  const grouped = withThousands(intPart)
+  return frac != null ? `${grouped}.${frac}` : grouped
+}
+
+/** Fiat / USD amounts — always with thousands separators (e.g. $15,488.17). */
+export function formatMoney(n: number, opts?: { signed?: boolean; digits?: number }): string {
+  if (!Number.isFinite(n)) return '—'
+  const digits = opts?.digits ?? 2
+  const body = formatFixedGrouped(n, digits)
+  if (opts?.signed) {
+    if (n > 0) return `+$${body}`
+    if (n < 0) return `-$${body}`
+    return `$${body}`
+  }
+  return n < 0 ? `-$${body}` : `$${body}`
+}
+
+/** Numeric money without currency symbol (still with thousands separators). */
+export function formatMoneyAmount(n: number, digits = 2): string {
+  if (!Number.isFinite(n)) return '—'
+  const body = formatFixedGrouped(n, digits)
+  return n < 0 ? `-${body}` : body
+}
+
 export function formatUnitPrice(price: number): string {
   if (!Number.isFinite(price) || price <= 0) return '—'
-  if (price >= 1000) return price.toLocaleString(undefined, { maximumFractionDigits: 2 })
-  if (price >= 1) return price.toFixed(2)
-  if (price >= 0.01) return price.toFixed(4)
-  return price.toFixed(6).replace(/0+$/, '').replace(/\.$/, '')
+  if (price >= 1) return formatFixedGrouped(price, 2)
+  if (price >= 0.01) {
+    const fixed = price.toFixed(4).replace(/0+$/, '').replace(/\.$/, '')
+    const [intPart, frac] = fixed.split('.')
+    const grouped = withThousands(intPart)
+    return frac ? `${grouped}.${frac}` : grouped
+  }
+  const raw = price.toFixed(6).replace(/0+$/, '').replace(/\.$/, '')
+  const [intPart, frac] = raw.split('.')
+  const grouped = withThousands(intPart)
+  return frac ? `${grouped}.${frac}` : grouped
 }

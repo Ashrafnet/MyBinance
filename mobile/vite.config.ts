@@ -21,6 +21,9 @@ export default defineConfig({
     },
   },
   preview: {
+    // Allow phone/LAN and reverse-tunnel hostnames (Pinggy, Cloudflare, etc.).
+    host: true,
+    allowedHosts: true,
     proxy: {
       '/proxy/binance': {
         target: 'https://api.binance.com',
