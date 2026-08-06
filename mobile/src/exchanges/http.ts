@@ -37,7 +37,16 @@ export async function httpRequest<T>(opts: {
       body: opts.body,
     })
     const text = await res.text()
-    if (!res.ok) throw new ExchangeError(`HTTP ${res.status}: ${text}`, res.status)
+    if (!res.ok) {
+      let detail = text.slice(0, 240)
+      try {
+        const parsed = JSON.parse(text) as { msg?: string; message?: string }
+        detail = parsed.msg || parsed.message || detail
+      } catch {
+        /* keep raw */
+      }
+      throw new ExchangeError(detail || `HTTP ${res.status}`, res.status)
+    }
     return (text ? JSON.parse(text) : null) as T
   } catch (e) {
     if (e instanceof ExchangeError) throw e

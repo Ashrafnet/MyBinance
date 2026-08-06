@@ -3,6 +3,39 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
+  server: {
+    proxy: {
+      // Bypass browser CORS for signed exchange REST during local/dev PWA use.
+      '/proxy/binance': {
+        target: 'https://api.binance.com',
+        changeOrigin: true,
+        secure: true,
+        rewrite: (path) => path.replace(/^\/proxy\/binance/, ''),
+      },
+      '/proxy/okx': {
+        target: 'https://www.okx.com',
+        changeOrigin: true,
+        secure: true,
+        rewrite: (path) => path.replace(/^\/proxy\/okx/, ''),
+      },
+    },
+  },
+  preview: {
+    proxy: {
+      '/proxy/binance': {
+        target: 'https://api.binance.com',
+        changeOrigin: true,
+        secure: true,
+        rewrite: (path) => path.replace(/^\/proxy\/binance/, ''),
+      },
+      '/proxy/okx': {
+        target: 'https://www.okx.com',
+        changeOrigin: true,
+        secure: true,
+        rewrite: (path) => path.replace(/^\/proxy\/okx/, ''),
+      },
+    },
+  },
   plugins: [
     react(),
     VitePWA({

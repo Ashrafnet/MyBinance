@@ -36,7 +36,7 @@ npx cap sync
 npx cap open android
 ```
 
-Private exchange REST calls work best in the Capacitor native HTTP layer (avoids browser CORS).
+Browser dev/preview uses Vite proxies at `/proxy/binance` and `/proxy/okx` so signed Spot REST works without CORS errors. Capacitor Android uses native HTTP to the exchange hosts directly.
 
 ## Manual smoke checklist
 

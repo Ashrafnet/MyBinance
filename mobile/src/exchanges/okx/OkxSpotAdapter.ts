@@ -7,13 +7,19 @@ import type {
   PlaceOrderRequest,
   TickerRow,
 } from '../../domain/types'
+import { restBase, wsPublic } from '../endpoints'
 import { httpRequest } from '../http'
 import type { IExchange } from '../types'
 import { ExchangeError } from '../types'
 import { signOkx } from './sign'
 
-const REST = 'https://www.okx.com'
-const WS = 'wss://ws.okx.com:8443/ws/v5/public'
+function rest() {
+  return restBase('okx')
+}
+
+function ws() {
+  return wsPublic('okx')
+}
 
 type OkxResp<T> = { code: string; msg: string; data: T }
 
@@ -27,7 +33,7 @@ async function privateRequest<T>(
   const body = bodyObj ? JSON.stringify(bodyObj) : ''
   const timestamp = new Date().toISOString()
   const sign = await signOkx(timestamp, method, path, body, creds.secretKey)
-  const url = `${REST}${path}`
+  const url = `${rest()}${path}`
   const data = await httpRequest<OkxResp<T>>({
     url,
     method,
@@ -161,7 +167,7 @@ export class OkxSpotAdapter implements IExchange {
 
   async fetchTickers(): Promise<TickerRow[]> {
     const data = await httpRequest<OkxResp<Array<{ instId: string; last: string; sodUtc0: string; volCcy24h: string }>>>({
-      url: `${REST}/api/v5/market/tickers?instType=SPOT`,
+      url: `${rest()}/api/v5/market/tickers?instType=SPOT`,
     })
     if (data.code !== '0') throw new ExchangeError(data.msg || 'OKX ticker error', data.code)
     const now = Date.now()
@@ -183,7 +189,7 @@ export class OkxSpotAdapter implements IExchange {
       interval === '1m' ? '1m' : interval === '5m' ? '5m' : interval === '1h' ? '1H' : interval === '1d' ? '1D' : interval
     const instId = fromAppSymbol(symbol)
     const data = await httpRequest<OkxResp<string[][]>>({
-      url: `${REST}/api/v5/market/candles?instId=${encodeURIComponent(instId)}&bar=${bar}&limit=${limit}`,
+      url: `${rest()}/api/v5/market/candles?instId=${encodeURIComponent(instId)}&bar=${bar}&limit=${limit}`,
     })
     if (data.code !== '0') throw new ExchangeError(data.msg || 'OKX candles error', data.code)
     return data.data
@@ -199,11 +205,11 @@ export class OkxSpotAdapter implements IExchange {
   }
 
   subscribeTickers(onUpdate: (t: TickerRow) => void): () => void {
-    const ws = new WebSocket(WS)
-    ws.onopen = () => {
-      ws.send(JSON.stringify({ op: 'subscribe', args: [{ channel: 'tickers', instType: 'SPOT' }] }))
+    const sock = new WebSocket(ws())
+    sock.onopen = () => {
+      sock.send(JSON.stringify({ op: 'subscribe', args: [{ channel: 'tickers', instType: 'SPOT' }] }))
     }
-    ws.onmessage = (ev) => {
+    sock.onmessage = (ev) => {
       try {
         const msg = JSON.parse(String(ev.data)) as {
           data?: Array<{ instId: string; last: string; sodUtc0: string; volCcy24h: string }>
@@ -225,18 +231,18 @@ export class OkxSpotAdapter implements IExchange {
         /* ignore */
       }
     }
-    return () => ws.close()
+    return () => sock.close()
   }
 
   subscribeCandles(symbol: string, interval: string, onUpdate: (c: Candle) => void): () => void {
     const bar =
       interval === '1m' ? '1m' : interval === '5m' ? '5m' : interval === '1h' ? '1H' : interval === '1d' ? '1D' : interval
     const instId = fromAppSymbol(symbol)
-    const ws = new WebSocket(WS)
-    ws.onopen = () => {
-      ws.send(JSON.stringify({ op: 'subscribe', args: [{ channel: 'candle' + bar, instId }] }))
+    const sock = new WebSocket(ws())
+    sock.onopen = () => {
+      sock.send(JSON.stringify({ op: 'subscribe', args: [{ channel: 'candle' + bar, instId }] }))
     }
-    ws.onmessage = (ev) => {
+    sock.onmessage = (ev) => {
       try {
         const msg = JSON.parse(String(ev.data)) as { data?: string[][] }
         const k = msg.data?.[0]
@@ -253,6 +259,6 @@ export class OkxSpotAdapter implements IExchange {
         /* ignore */
       }
     }
-    return () => ws.close()
+    return () => sock.close()
   }
 }

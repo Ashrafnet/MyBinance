@@ -7,13 +7,19 @@ import type {
   PlaceOrderRequest,
   TickerRow,
 } from '../../domain/types'
+import { restBase, wsPublic } from '../endpoints'
 import { httpRequest } from '../http'
 import type { IExchange } from '../types'
 import { ExchangeError } from '../types'
 import { signBinanceQuery } from './sign'
 
-const REST = 'https://api.binance.com'
-const WS = 'wss://stream.binance.com:9443/ws'
+function rest() {
+  return restBase('binance')
+}
+
+function ws() {
+  return wsPublic('binance')
+}
 
 async function signedRequest<T>(
   creds: AccountCredentials,
@@ -27,7 +33,7 @@ async function signedRequest<T>(
   q.set('recvWindow', '60000')
   const total = q.toString()
   const signature = await signBinanceQuery(total, creds.secretKey)
-  const url = `${REST}${path}?${total}&signature=${signature}`
+  const url = `${rest()}${path}?${total}&signature=${signature}`
   return httpRequest<T>({
     url,
     method,
@@ -127,7 +133,7 @@ export class BinanceSpotAdapter implements IExchange {
 
   async fetchTickers(): Promise<TickerRow[]> {
     const data = await httpRequest<Array<{ symbol: string; lastPrice: string; priceChangePercent: string; quoteVolume: string }>>({
-      url: `${REST}/api/v3/ticker/24hr`,
+      url: `${rest()}/api/v3/ticker/24hr`,
     })
     const now = Date.now()
     return data.map((t) => ({
@@ -140,7 +146,7 @@ export class BinanceSpotAdapter implements IExchange {
   }
 
   async fetchCandles(symbol: string, interval: string, limit = 200): Promise<Candle[]> {
-    const url = `${REST}/api/v3/klines?symbol=${encodeURIComponent(symbol)}&interval=${interval}&limit=${limit}`
+    const url = `${rest()}/api/v3/klines?symbol=${encodeURIComponent(symbol)}&interval=${interval}&limit=${limit}`
     const data = await httpRequest<Array<Array<string | number>>>({ url })
     return data.map((k) => ({
       time: Math.floor(Number(k[0]) / 1000),
@@ -182,8 +188,8 @@ export class BinanceSpotAdapter implements IExchange {
   }
 
   subscribeTickers(onUpdate: (t: TickerRow) => void): () => void {
-    const ws = new WebSocket(`${WS}/!miniTicker@arr`)
-    ws.onmessage = (ev) => {
+    const sock = new WebSocket(`${ws()}/!miniTicker@arr`)
+    sock.onmessage = (ev) => {
       try {
         const arr = JSON.parse(String(ev.data)) as Array<{ s: string; c: string; o: string }>
         const now = Date.now()
@@ -201,13 +207,13 @@ export class BinanceSpotAdapter implements IExchange {
         /* ignore */
       }
     }
-    return () => ws.close()
+    return () => sock.close()
   }
 
   subscribeCandles(symbol: string, interval: string, onUpdate: (c: Candle) => void): () => void {
     const stream = `${symbol.toLowerCase()}@kline_${interval}`
-    const ws = new WebSocket(`${WS}/${stream}`)
-    ws.onmessage = (ev) => {
+    const sock = new WebSocket(`${ws()}/${stream}`)
+    sock.onmessage = (ev) => {
       try {
         const msg = JSON.parse(String(ev.data)) as { k: { t: number; o: string; h: string; l: string; c: string; v: string } }
         const k = msg.k
@@ -223,6 +229,6 @@ export class BinanceSpotAdapter implements IExchange {
         /* ignore */
       }
     }
-    return () => ws.close()
+    return () => sock.close()
   }
 }
