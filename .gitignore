@@ -33,3 +33,6 @@ credentials.json
 Thumbs.db
 Desktop.ini
 *.log
+
+## Local brainstorm / agent tooling
+.superpowers/
