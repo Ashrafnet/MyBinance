@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import type { Candle, ExchangeId, TickerRow } from '../domain/types'
 import { cacheGetCandles, cacheGetTickers, cacheUpsertCandles } from '../storage/cache'
 import { getFavorites, toggleFavorite } from '../storage/favorites'
@@ -6,11 +7,20 @@ import { getExchange } from '../exchanges/registry'
 import { startLiveCandles, startLiveTickers } from '../services/pricesLive'
 import { useOnline } from '../app/OnlineContext'
 import { CandleChart } from '../components/CandleChart'
+import { AssetIcon } from '../components/AssetIcon'
+import { AppSelect } from '../components/AppSelect'
 
-const INTERVALS = ['1m', '5m', '1h', '4h', '1d'] as const
+const INTERVALS = ['1m', '5m', '15m', '1h', '4h', '1d', '1w'] as const
+
+type LiveNavState = {
+  symbol?: string
+  view?: 'cards' | 'fav' | 'chart'
+  exchange?: ExchangeId
+}
 
 export function LiveScreen() {
   const online = useOnline()
+  const location = useLocation()
   const [exchange, setExchange] = useState<ExchangeId>('binance')
   const [tickers, setTickers] = useState<TickerRow[]>([])
   const [favorites, setFavorites] = useState<string[]>([])
@@ -19,6 +29,14 @@ export function LiveScreen() {
   const [candles, setCandles] = useState<Candle[]>([])
   const [q, setQ] = useState('')
   const [view, setView] = useState<'cards' | 'fav' | 'chart'>('fav')
+
+  useEffect(() => {
+    const state = (location.state as LiveNavState | null) ?? null
+    if (!state?.symbol) return
+    setSelected(state.symbol.toUpperCase())
+    if (state.view) setView(state.view)
+    if (state.exchange) setExchange(state.exchange)
+  }, [location.state, location.key])
 
   useEffect(() => {
     void (async () => {
@@ -137,7 +155,7 @@ export function LiveScreen() {
                   setView('chart')
                 }}
               >
-                <div className="asset-avatar">{t.symbol.slice(0, 1)}</div>
+                <AssetIcon asset={t.symbol} />
                 <div className="asset-main">
                   <strong>{t.symbol}</strong>
                   <span>Tap for chart</span>
@@ -190,10 +208,15 @@ export function LiveScreen() {
       </div>
 
       <div className="chip-row">
-        <select className="chip-select" value={exchange} onChange={(e) => setExchange(e.target.value as ExchangeId)}>
-          <option value="binance">Binance</option>
-          <option value="okx">OKX</option>
-        </select>
+        <AppSelect
+          icon="exchange"
+          value={exchange}
+          onChange={(v) => setExchange(v as ExchangeId)}
+          options={[
+            { value: 'binance', label: 'Binance', hint: 'Spot markets' },
+            { value: 'okx', label: 'OKX', hint: 'Spot markets' },
+          ]}
+        />
         <input
           className="search-pill"
           placeholder="Search BTC…"
@@ -224,7 +247,7 @@ export function LiveScreen() {
                 className={`interval-chip ${interval === i ? 'active' : ''}`}
                 onClick={() => setInterval(i)}
               >
-                {i === '4h' ? '4H' : i}
+                {i === '4h' ? '4H' : i === '1w' ? '1W' : i}
               </button>
             ))}
           </div>

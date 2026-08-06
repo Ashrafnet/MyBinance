@@ -25,3 +25,31 @@ export function sumUsdt(balances: BalanceRow[]): number {
 export function sumBtc(balances: BalanceRow[]): number {
   return balances.reduce((s, b) => s + b.btcValue, 0)
 }
+
+export function unitPriceUsdt(
+  asset: string,
+  total: number,
+  usdtValue: number,
+  tickersBySymbol: Map<string, number>,
+): number | null {
+  if (asset === 'USDT' || asset === 'BUSD' || asset === 'USD' || asset === 'FDUSD' || asset === 'TUSD') {
+    return 1
+  }
+  const usdtPair = tickersBySymbol.get(`${asset}USDT`)
+  if (usdtPair && usdtPair > 0) return usdtPair
+
+  const btcPair = tickersBySymbol.get(`${asset}BTC`)
+  const btcUsdt = tickersBySymbol.get('BTCUSDT') ?? 0
+  if (btcPair && btcPair > 0 && btcUsdt > 0) return btcPair * btcUsdt
+
+  if (total > 0 && usdtValue > 0) return usdtValue / total
+  return null
+}
+
+export function formatUnitPrice(price: number): string {
+  if (!Number.isFinite(price) || price <= 0) return '—'
+  if (price >= 1000) return price.toLocaleString(undefined, { maximumFractionDigits: 2 })
+  if (price >= 1) return price.toFixed(2)
+  if (price >= 0.01) return price.toFixed(4)
+  return price.toFixed(6).replace(/0+$/, '').replace(/\.$/, '')
+}

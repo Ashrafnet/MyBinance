@@ -61,6 +61,27 @@ function fromAppSymbol(symbol: string): string {
   return symbol
 }
 
+function toOkxBar(interval: string): string {
+  switch (interval) {
+    case '1m':
+      return '1m'
+    case '5m':
+      return '5m'
+    case '15m':
+      return '15m'
+    case '1h':
+      return '1H'
+    case '4h':
+      return '4H'
+    case '1d':
+      return '1D'
+    case '1w':
+      return '1W'
+    default:
+      return interval
+  }
+}
+
 function mapOrder(o: Record<string, string>, accountId: string): OrderRow {
   const state = (o.state ?? '').toLowerCase()
   let status: OrderRow['status'] = 'open'
@@ -185,18 +206,7 @@ export class OkxSpotAdapter implements IExchange {
   }
 
   async fetchCandles(symbol: string, interval: string, limit = 200): Promise<Candle[]> {
-    const bar =
-      interval === '1m'
-        ? '1m'
-        : interval === '5m'
-          ? '5m'
-          : interval === '1h'
-            ? '1H'
-            : interval === '4h'
-              ? '4H'
-              : interval === '1d'
-                ? '1D'
-                : interval
+    const bar = toOkxBar(interval)
     const instId = fromAppSymbol(symbol)
     const data = await httpRequest<OkxResp<string[][]>>({
       url: `${rest()}/api/v5/market/candles?instId=${encodeURIComponent(instId)}&bar=${bar}&limit=${limit}`,
@@ -245,18 +255,7 @@ export class OkxSpotAdapter implements IExchange {
   }
 
   subscribeCandles(symbol: string, interval: string, onUpdate: (c: Candle) => void): () => void {
-    const bar =
-      interval === '1m'
-        ? '1m'
-        : interval === '5m'
-          ? '5m'
-          : interval === '1h'
-            ? '1H'
-            : interval === '4h'
-              ? '4H'
-              : interval === '1d'
-                ? '1D'
-                : interval
+    const bar = toOkxBar(interval)
     const instId = fromAppSymbol(symbol)
     const sock = new WebSocket(ws())
     sock.onopen = () => {

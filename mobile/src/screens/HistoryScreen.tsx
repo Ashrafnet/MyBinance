@@ -3,6 +3,7 @@ import type { AccountMeta, HistoryPoint } from '../domain/types'
 import { cacheGetHistory, listAccounts } from '../storage/cache'
 import { syncAccount, syncAll } from '../services/sync'
 import { useOnline } from '../app/OnlineContext'
+import { AppSelect } from '../components/AppSelect'
 
 export function HistoryScreen() {
   const online = useOnline()
@@ -70,14 +71,20 @@ export function HistoryScreen() {
         </button>
       </div>
 
-      <select className="chip-select full-width" value={accountId} onChange={(e) => setAccountId(e.target.value)}>
-        <option value="all">All accounts</option>
-        {accounts.map((a) => (
-          <option key={a.id} value={a.id}>
-            {a.alias} ({a.exchange})
-          </option>
-        ))}
-      </select>
+      <AppSelect
+        fullWidth
+        icon="wallet"
+        value={accountId}
+        onChange={setAccountId}
+        options={[
+          { value: 'all', label: 'All accounts', hint: 'Combined' },
+          ...accounts.map((a) => ({
+            value: a.id,
+            label: a.alias,
+            hint: a.exchange === 'binance' ? 'Binance' : 'OKX',
+          })),
+        ]}
+      />
 
       <div className="asset-list">
         {sorted.map((p) => (

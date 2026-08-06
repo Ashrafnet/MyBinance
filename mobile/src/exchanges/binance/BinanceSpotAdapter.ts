@@ -103,12 +103,31 @@ export class BinanceSpotAdapter implements IExchange {
   }
 
   async fetchOrderHistory(creds: AccountCredentials, accountId: string, symbol?: string): Promise<OrderRow[]> {
-    if (!symbol) return []
-    const data = await signedRequest<Array<Record<string, unknown>>>(creds, 'GET', '/api/v3/allOrders', {
-      symbol,
-      limit: 50,
-    })
-    return data.map((o) => mapOrder(o, accountId)).filter((o) => o.status !== 'open' && o.status !== 'partial')
+    // Binance /api/v3/allOrders requires a symbol — when omitted, pull history for held assets.
+    const symbols = symbol
+      ? [symbol.toUpperCase()]
+      : (await this.fetchBalances(creds))
+          .map((b) => b.asset.toUpperCase())
+          .filter((a) => !['USDT', 'USDC', 'BUSD', 'FDUSD', 'TUSD', 'DAI', 'USD'].includes(a))
+          .map((a) => `${a}USDT`)
+          .slice(0, 30)
+
+    const byId = new Map<string, OrderRow>()
+    for (const sym of symbols) {
+      try {
+        const data = await signedRequest<Array<Record<string, unknown>>>(creds, 'GET', '/api/v3/allOrders', {
+          symbol: sym,
+          limit: 50,
+        })
+        for (const row of data.map((o) => mapOrder(o, accountId))) {
+          if (row.status === 'open' || row.status === 'partial') continue
+          byId.set(row.id, row)
+        }
+      } catch {
+        /* no USDT market or no trades for this asset */
+      }
+    }
+    return [...byId.values()].sort((a, b) => b.updatedAt - a.updatedAt)
   }
 
   async placeOrder(creds: AccountCredentials, req: PlaceOrderRequest): Promise<OrderRow> {
