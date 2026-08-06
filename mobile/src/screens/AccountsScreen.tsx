@@ -119,12 +119,12 @@ export function AccountsScreen() {
         <h3>Your accounts</h3>
         {accounts.length === 0 && <p className="muted">No accounts yet.</p>}
         {accounts.map((a) => (
-          <div key={a.id} className="row" style={{ justifyContent: 'space-between', marginBottom: 8 }}>
+          <div key={a.id} className="account-row">
             <div>
               <strong>{a.alias}</strong>
               <div className="muted">{a.exchange}</div>
             </div>
-            <button type="button" className="btn danger" onClick={() => void onDelete(a.id)}>
+            <button type="button" className="btn danger btn-compact" onClick={() => void onDelete(a.id)}>
               Delete
             </button>
           </div>
@@ -133,33 +133,35 @@ export function AccountsScreen() {
 
       <form className="panel" onSubmit={(e) => void onAdd(e)}>
         <h3>Add account</h3>
-        <label>
-          Alias
-          <input value={alias} onChange={(e) => setAlias(e.target.value)} placeholder="Main Binance" />
-        </label>
-        <label>
-          Exchange
-          <select value={exchange} onChange={(e) => setExchange(e.target.value as ExchangeId)}>
-            <option value="binance">Binance Spot</option>
-            <option value="okx">OKX Spot</option>
-          </select>
-        </label>
-        <label>
-          API key
-          <input value={apiKey} onChange={(e) => setApiKey(e.target.value)} required autoComplete="off" />
-        </label>
-        <label>
-          Secret key
-          <input value={secretKey} onChange={(e) => setSecretKey(e.target.value)} required autoComplete="off" />
-        </label>
-        {exchange === 'okx' && (
+        <div className="form-grid">
           <label>
-            Passphrase
-            <input value={passphrase} onChange={(e) => setPassphrase(e.target.value)} required autoComplete="off" />
+            Alias
+            <input value={alias} onChange={(e) => setAlias(e.target.value)} placeholder="Main Binance" />
           </label>
-        )}
+          <label>
+            Exchange
+            <select value={exchange} onChange={(e) => setExchange(e.target.value as ExchangeId)}>
+              <option value="binance">Binance Spot</option>
+              <option value="okx">OKX Spot</option>
+            </select>
+          </label>
+          <label className="full">
+            API key
+            <input value={apiKey} onChange={(e) => setApiKey(e.target.value)} required autoComplete="off" />
+          </label>
+          <label className="full">
+            Secret key
+            <input value={secretKey} onChange={(e) => setSecretKey(e.target.value)} required autoComplete="off" />
+          </label>
+          {exchange === 'okx' && (
+            <label className="full">
+              Passphrase
+              <input value={passphrase} onChange={(e) => setPassphrase(e.target.value)} required autoComplete="off" />
+            </label>
+          )}
+        </div>
         {formError && <div className="banner danger">{formError}</div>}
-        <button type="submit" className="btn primary" disabled={busy}>
+        <button type="submit" className="btn primary block" disabled={busy}>
           {busy ? 'Saving…' : 'Save account'}
         </button>
       </form>

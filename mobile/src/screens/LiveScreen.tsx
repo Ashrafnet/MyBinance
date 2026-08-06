@@ -117,21 +117,21 @@ export function LiveScreen() {
 
   return (
     <div>
-      <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <div className="page-head">
         <div>
           <p className="eyebrow">Markets</p>
           <h2>Live prices</h2>
         </div>
         <div className="tabs">
-          <button className={`btn ${view === 'cards' ? 'active' : ''}`} onClick={() => setView('cards')}>
+          <button type="button" className={`btn ${view === 'cards' ? 'active' : ''}`} onClick={() => setView('cards')}>
             Cards
           </button>
-          <button className={`btn ${view === 'chart' ? 'active' : ''}`} onClick={() => setView('chart')}>
+          <button type="button" className={`btn ${view === 'chart' ? 'active' : ''}`} onClick={() => setView('chart')}>
             Candles
           </button>
         </div>
       </div>
-      <div className="row" style={{ marginBottom: 12 }}>
+      <div className="live-controls">
         <select value={exchange} onChange={(e) => setExchange(e.target.value as ExchangeId)}>
           <option value="binance">Binance</option>
           <option value="okx">OKX</option>
@@ -141,7 +141,6 @@ export function LiveScreen() {
           placeholder="Search e.g. BTC"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          style={{ maxWidth: 220 }}
         />
       </div>
 
@@ -162,8 +161,8 @@ export function LiveScreen() {
                 <div className="row" style={{ justifyContent: 'space-between' }}>
                   <div className="sym">{t.symbol}</div>
                   <button
-                    className="btn"
-                    style={{ padding: '4px 8px' }}
+                    type="button"
+                    className="btn btn-compact"
                     onClick={(e) => {
                       e.stopPropagation()
                       void onToggleFav(t.symbol)
@@ -185,9 +184,9 @@ export function LiveScreen() {
 
       {view === 'chart' && (
         <div className="panel">
-          <div className="row" style={{ marginBottom: 10 }}>
-            <strong>{selected}</strong>
-            <button className="btn" onClick={() => void onToggleFav(selected)}>
+          <div className="row filters" style={{ marginBottom: 10 }}>
+            <strong style={{ flex: '1 1 auto' }}>{selected}</strong>
+            <button type="button" className="btn btn-compact" onClick={() => void onToggleFav(selected)}>
               {favorites.includes(selected) ? 'Unfavorite' : 'Favorite'}
             </button>
             <select value={interval} onChange={(e) => setInterval(e.target.value as (typeof INTERVALS)[number])}>

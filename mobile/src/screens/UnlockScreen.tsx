@@ -52,8 +52,9 @@ export function UnlockScreen() {
         </div>
         {auth.initialized && auth.biometricAvailable && (
           <button
-            className="btn primary"
-            style={{ width: '100%', marginBottom: 12 }}
+            type="button"
+            className="btn primary block"
+            style={{ marginBottom: 12 }}
             disabled={busy}
             onClick={() => void onBio()}
           >
@@ -75,7 +76,7 @@ export function UnlockScreen() {
             />
           </label>
           {error && <div className="banner danger">{error}</div>}
-          <button className="btn primary" style={{ width: '100%' }} disabled={busy || pin.length < 4}>
+          <button type="submit" className="btn primary block" disabled={busy || pin.length < 4}>
             {auth.initialized ? 'Unlock with PIN' : 'Create vault'}
           </button>
         </form>

@@ -87,8 +87,9 @@ export function OrdersScreen() {
 
   return (
     <div>
+      <p className="eyebrow">Trading</p>
       <h2>Orders</h2>
-      <div className="row" style={{ marginBottom: 12 }}>
+      <div className="row filters">
         <select value={accountId} onChange={(e) => setAccountId(e.target.value)}>
           {accounts.map((a) => (
             <option key={a.id} value={a.id}>
@@ -98,57 +99,58 @@ export function OrdersScreen() {
         </select>
       </div>
       <div className="tabs">
-        <button className={`btn ${tab === 'open' ? 'active' : ''}`} onClick={() => setTab('open')}>
+        <button type="button" className={`btn ${tab === 'open' ? 'active' : ''}`} onClick={() => setTab('open')}>
           Open
         </button>
-        <button className={`btn ${tab === 'history' ? 'active' : ''}`} onClick={() => setTab('history')}>
+        <button type="button" className={`btn ${tab === 'history' ? 'active' : ''}`} onClick={() => setTab('history')}>
           History
         </button>
-        <button className={`btn ${tab === 'place' ? 'active' : ''}`} onClick={() => setTab('place')}>
+        <button type="button" className={`btn ${tab === 'place' ? 'active' : ''}`} onClick={() => setTab('place')}>
           Place
         </button>
       </div>
 
       {tab === 'place' && (
         <form className="panel" onSubmit={(e) => void place(e)}>
-          <label>
-            Symbol
-            <input value={symbol} onChange={(e) => setSymbol(e.target.value)} />
-          </label>
-          <div className="row">
-            <label className="grow">
+          <div className="form-grid">
+            <label className="full">
+              Symbol
+              <input value={symbol} onChange={(e) => setSymbol(e.target.value)} />
+            </label>
+            <label>
               Side
               <select value={side} onChange={(e) => setSide(e.target.value as OrderSide)}>
                 <option value="buy">Buy</option>
                 <option value="sell">Sell</option>
               </select>
             </label>
-            <label className="grow">
+            <label>
               Type
               <select value={type} onChange={(e) => setType(e.target.value as OrderType)}>
                 <option value="limit">Limit</option>
                 <option value="market">Market</option>
               </select>
             </label>
-          </div>
-          <label>
-            Quantity
-            <input value={quantity} onChange={(e) => setQuantity(e.target.value)} />
-          </label>
-          {type === 'limit' && (
             <label>
-              Price
-              <input value={price} onChange={(e) => setPrice(e.target.value)} required />
+              Quantity
+              <input value={quantity} onChange={(e) => setQuantity(e.target.value)} />
             </label>
-          )}
-          <button className="btn primary" disabled={!online}>
+            {type === 'limit' && (
+              <label>
+                Price
+                <input value={price} onChange={(e) => setPrice(e.target.value)} required />
+              </label>
+            )}
+          </div>
+          <button type="submit" className="btn primary block" disabled={!online}>
             Place order
           </button>
         </form>
       )}
 
       {(tab === 'open' || tab === 'history') && (
-        <div className="panel" style={{ overflowX: 'auto' }}>
+        <div className="panel balance-shell">
+          <div className="table-wrap">
           <table>
             <thead>
               <tr>
@@ -174,7 +176,7 @@ export function OrdersScreen() {
                   <td>{o.status}</td>
                   <td>
                     {tab === 'open' && (
-                      <button className="btn danger" disabled={!online} onClick={() => void cancel(o)}>
+                      <button type="button" className="btn danger btn-compact" disabled={!online} onClick={() => void cancel(o)}>
                         Cancel
                       </button>
                     )}
@@ -183,6 +185,7 @@ export function OrdersScreen() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
       <Toast message={toast} onClose={() => setToast(null)} />

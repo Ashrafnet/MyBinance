@@ -16,7 +16,8 @@ export function CandleChart({ candles }: { candles: Candle[] }) {
 
   useEffect(() => {
     if (!ref.current) return
-    const chart = createChart(ref.current, {
+    const el = ref.current
+    const chart = createChart(el, {
       layout: {
         background: { color: 'transparent' },
         textColor: '#64748b',
@@ -25,8 +26,9 @@ export function CandleChart({ candles }: { candles: Candle[] }) {
         vertLines: { color: 'rgba(15,23,42,0.05)' },
         horzLines: { color: 'rgba(15,23,42,0.05)' },
       },
-      width: ref.current.clientWidth,
-      height: 320,
+      width: el.clientWidth,
+      height: Math.max(220, el.clientHeight || 320),
+      autoSize: false,
     })
     const series = chart.addSeries(CandlestickSeries, {
       upColor: '#047857',
@@ -38,12 +40,21 @@ export function CandleChart({ candles }: { candles: Candle[] }) {
     chartRef.current = chart
     seriesRef.current = series
 
-    const onResize = () => {
-      if (ref.current) chart.applyOptions({ width: ref.current.clientWidth })
+    const resize = () => {
+      if (!ref.current) return
+      chart.applyOptions({
+        width: ref.current.clientWidth,
+        height: Math.max(220, ref.current.clientHeight || 320),
+      })
     }
-    window.addEventListener('resize', onResize)
+
+    const ro = new ResizeObserver(() => resize())
+    ro.observe(el)
+    window.addEventListener('orientationchange', resize)
+
     return () => {
-      window.removeEventListener('resize', onResize)
+      ro.disconnect()
+      window.removeEventListener('orientationchange', resize)
       chart.remove()
       chartRef.current = null
       seriesRef.current = null

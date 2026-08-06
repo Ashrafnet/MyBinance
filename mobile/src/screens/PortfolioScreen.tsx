@@ -79,7 +79,7 @@ export function PortfolioScreen() {
 
   return (
     <div>
-      <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <div className="page-head">
         <div>
           <p className="eyebrow">Balances</p>
           <h2>Portfolio</h2>
@@ -92,8 +92,8 @@ export function PortfolioScreen() {
       <p className="hero-sub" style={{ marginBottom: 14 }}>
         {sumBtc(filtered).toFixed(6)} BTC · synced {lastSync}
       </p>
-      <div className="row" style={{ marginBottom: 12 }}>
-        <select value={accountId} onChange={(e) => setAccountId(e.target.value)} style={{ maxWidth: 220 }}>
+      <div className="row filters">
+        <select value={accountId} onChange={(e) => setAccountId(e.target.value)}>
           <option value="all">All accounts</option>
           {accounts.map((a) => (
             <option key={a.id} value={a.id}>
@@ -106,7 +106,6 @@ export function PortfolioScreen() {
           placeholder="Search asset"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          style={{ maxWidth: 240 }}
         />
       </div>
       <div className="panel balance-shell">
