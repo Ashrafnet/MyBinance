@@ -1,6 +1,8 @@
+import type { OrderRow } from '../domain/types'
 import {
+  cacheGetSyncMeta,
   cacheGetTickers,
-  cacheReplaceAccountOrders,
+  cacheMergeAccountOrders,
   cacheSetSyncMeta,
   cacheUpsertBalances,
   cacheUpsertHistory,
@@ -8,8 +10,14 @@ import {
   listAccounts,
 } from '../storage/cache'
 import { getCredentials } from '../storage/vault'
+import { formatExchangeSyncError } from '../exchanges/formatSyncError'
 import { getExchange, allExchanges } from '../exchanges/registry'
 import { sumUsdt, valueBalances } from './valuation'
+
+export type SyncAccountOptions = {
+  /** Expensive on Binance (per-symbol allOrders). Default false for portfolio refresh. */
+  orderHistory?: boolean
+}
 
 export async function syncPublicMarkets(preferred: 'binance' | 'okx' = 'binance') {
   const ex = getExchange(preferred)
@@ -18,7 +26,7 @@ export async function syncPublicMarkets(preferred: 'binance' | 'okx' = 'binance'
   return tickers
 }
 
-export async function syncAccount(accountId: string) {
+export async function syncAccount(accountId: string, opts: SyncAccountOptions = {}) {
   const accounts = await listAccounts()
   const account = accounts.find((a) => a.id === accountId)
   if (!account) throw new Error('Account not found')
@@ -35,13 +43,15 @@ export async function syncAccount(accountId: string) {
     await cacheUpsertBalances(accountId, valued)
 
     const open = await ex.fetchOpenOrders(creds, accountId)
-    let history: typeof open = []
-    try {
-      history = await ex.fetchOrderHistory(creds, accountId)
-    } catch {
-      history = []
+    let history: OrderRow[] | null = null
+    if (opts.orderHistory) {
+      try {
+        history = await ex.fetchOrderHistory(creds, accountId)
+      } catch {
+        history = null
+      }
     }
-    await cacheReplaceAccountOrders(accountId, [...open, ...history])
+    await cacheMergeAccountOrders(accountId, open, history)
 
     if (ex.fetchHistory) {
       try {
@@ -79,9 +89,16 @@ export async function syncAccount(accountId: string) {
 
     await cacheSetSyncMeta({ accountId, lastSyncAt: Date.now(), lastError: null })
   } catch (e) {
-    const msg = e instanceof Error ? e.message : 'Sync failed'
-    await cacheSetSyncMeta({ accountId, lastSyncAt: null, lastError: msg })
-    throw e
+    const raw = e instanceof Error ? e.message : 'Sync failed'
+    const msg = formatExchangeSyncError(raw, account.alias)
+    const prev = await cacheGetSyncMeta(accountId)
+    // Keep prior successful sync time so UI doesn't flip to "Synced Never".
+    await cacheSetSyncMeta({
+      accountId,
+      lastSyncAt: prev?.lastSyncAt ?? null,
+      lastError: msg,
+    })
+    throw new Error(msg)
   }
 }
 
@@ -133,9 +150,10 @@ export async function syncAll() {
   const accounts = await listAccounts()
   for (const a of accounts) {
     try {
-      await syncAccount(a.id)
+      // Portfolio path: balances + open orders only (no per-symbol allOrders).
+      await syncAccount(a.id, { orderHistory: false })
     } catch (e) {
-      errors.push(`${a.alias}: ${e instanceof Error ? e.message : 'failed'}`)
+      errors.push(formatExchangeSyncError(e instanceof Error ? e.message : 'failed', a.alias))
     }
   }
   return errors

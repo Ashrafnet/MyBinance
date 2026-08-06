@@ -1,7 +1,7 @@
 import { Capacitor, CapacitorHttp } from '@capacitor/core'
 import { ExchangeError } from './types'
 
-export type HttpMethod = 'GET' | 'POST' | 'DELETE'
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE'
 
 export async function httpRequest<T>(opts: {
   url: string
@@ -50,6 +50,10 @@ export async function httpRequest<T>(opts: {
     return (text ? JSON.parse(text) : null) as T
   } catch (e) {
     if (e instanceof ExchangeError) throw e
-    throw new ExchangeError(e instanceof Error ? e.message : 'Network error')
+    const raw = e instanceof Error ? e.message : 'Network error'
+    if (/failed to fetch|networkerror|load failed/i.test(raw)) {
+      throw new ExchangeError('Could not reach the exchange (network)')
+    }
+    throw new ExchangeError(raw)
   }
 }

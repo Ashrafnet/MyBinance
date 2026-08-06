@@ -12,7 +12,13 @@ import { restBase, wsPublic } from '../endpoints'
 import { httpRequest } from '../http'
 import type { IExchange } from '../types'
 import { ExchangeError } from '../types'
+import {
+  assertBinanceNotBanned,
+  isBinanceWeightOrBanError,
+  noteBinanceApiError,
+} from './rateLimit'
 import { signBinanceQuery } from './sign'
+import { binanceTimestamp, isRecvWindowError, syncBinanceServerTime } from './serverTime'
 
 function rest() {
   return restBase('binance')
@@ -22,25 +28,53 @@ function ws() {
   return wsPublic('binance')
 }
 
+async function signedRequestOnce<T>(
+  creds: AccountCredentials,
+  method: 'GET' | 'POST' | 'DELETE',
+  path: string,
+  params: Record<string, string | number> = {},
+): Promise<T> {
+  assertBinanceNotBanned()
+  const q = new URLSearchParams()
+  for (const [k, v] of Object.entries(params)) q.set(k, String(v))
+  q.set('timestamp', String(binanceTimestamp()))
+  q.set('recvWindow', '60000')
+  const total = q.toString()
+  const signature = await signBinanceQuery(total, creds.secretKey)
+  const url = `${rest()}${path}?${total}&signature=${signature}`
+  try {
+    return await httpRequest<T>({
+      url,
+      method,
+      headers: { 'X-MBX-APIKEY': creds.apiKey },
+    })
+  } catch (e) {
+    if (e instanceof Error) noteBinanceApiError(e.message)
+    throw e
+  }
+}
+
 async function signedRequest<T>(
   creds: AccountCredentials,
   method: 'GET' | 'POST' | 'DELETE',
   path: string,
   params: Record<string, string | number> = {},
 ): Promise<T> {
-  const q = new URLSearchParams()
-  for (const [k, v] of Object.entries(params)) q.set(k, String(v))
-  q.set('timestamp', String(Date.now()))
-  q.set('recvWindow', '60000')
-  const total = q.toString()
-  const signature = await signBinanceQuery(total, creds.secretKey)
-  const url = `${rest()}${path}?${total}&signature=${signature}`
-  return httpRequest<T>({
-    url,
-    method,
-    headers: { 'X-MBX-APIKEY': creds.apiKey },
-  })
+  await syncBinanceServerTime()
+  try {
+    return await signedRequestOnce<T>(creds, method, path, params)
+  } catch (e) {
+    if (isBinanceWeightOrBanError(e)) throw e
+    if (!isRecvWindowError(e)) throw e
+    // Device clock drifted or first sync was wrong — force re-sync and retry once.
+    await syncBinanceServerTime(true)
+    return signedRequestOnce<T>(creds, method, path, params)
+  }
 }
+
+const STABLECOINS = new Set(['USDT', 'USDC', 'BUSD', 'FDUSD', 'TUSD', 'DAI', 'USD'])
+/** Cap allOrders fan-out — each call is weight 10. */
+const MAX_HISTORY_SYMBOLS = 8
 
 function mapOrder(o: Record<string, unknown>, accountId: string): OrderRow {
   const statusRaw = String(o.status ?? '').toUpperCase()
@@ -103,27 +137,32 @@ export class BinanceSpotAdapter implements IExchange {
   }
 
   async fetchOrderHistory(creds: AccountCredentials, accountId: string, symbol?: string): Promise<OrderRow[]> {
-    // Binance /api/v3/allOrders requires a symbol — when omitted, pull history for held assets.
-    const symbols = symbol
-      ? [symbol.toUpperCase()]
-      : (await this.fetchBalances(creds))
-          .map((b) => b.asset.toUpperCase())
-          .filter((a) => !['USDT', 'USDC', 'BUSD', 'FDUSD', 'TUSD', 'DAI', 'USD'].includes(a))
-          .map((a) => `${a}USDT`)
-          .slice(0, 30)
+    // Binance /api/v3/allOrders requires a symbol. Keep fan-out tiny (weight 10 each).
+    let symbols: string[]
+    if (symbol) {
+      symbols = [symbol.toUpperCase()]
+    } else {
+      const balances = await this.fetchBalances(creds)
+      symbols = balances
+        .filter((b) => !STABLECOINS.has(b.asset.toUpperCase()) && b.total > 0)
+        .sort((a, b) => b.total - a.total)
+        .map((b) => `${b.asset.toUpperCase()}USDT`)
+        .slice(0, MAX_HISTORY_SYMBOLS)
+    }
 
     const byId = new Map<string, OrderRow>()
     for (const sym of symbols) {
       try {
         const data = await signedRequest<Array<Record<string, unknown>>>(creds, 'GET', '/api/v3/allOrders', {
           symbol: sym,
-          limit: 50,
+          limit: 30,
         })
         for (const row of data.map((o) => mapOrder(o, accountId))) {
           if (row.status === 'open' || row.status === 'partial') continue
           byId.set(row.id, row)
         }
-      } catch {
+      } catch (e) {
+        if (isBinanceWeightOrBanError(e)) throw e
         /* no USDT market or no trades for this asset */
       }
     }

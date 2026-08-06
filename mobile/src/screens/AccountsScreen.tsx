@@ -9,8 +9,9 @@ import {
   listAccounts,
   upsertAccount,
 } from '../storage/cache'
-import { deleteCredentials, saveCredentials } from '../storage/vault'
+import { deleteCredentials, getCredentials, saveCredentials } from '../storage/vault'
 import { getExchange } from '../exchanges/registry'
+import { useAccountFilter } from '../app/AccountFilterContext'
 import { useOnline } from '../app/OnlineContext'
 import { Toast } from '../components/Toast'
 import { ConfirmDialog } from '../components/ConfirmDialog'
@@ -42,6 +43,7 @@ function isUnreachableFromBrowser(err: unknown): boolean {
 export function AccountsScreen() {
   const online = useOnline()
   const navigate = useNavigate()
+  const { setAccountId, refreshAccounts } = useAccountFilter()
   const [cards, setCards] = useState<AccountView[]>([])
   const [alias, setAlias] = useState('')
   const [exchange, setExchange] = useState<ExchangeId>('binance')
@@ -52,6 +54,7 @@ export function AccountsScreen() {
   const [formError, setFormError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [showForm, setShowForm] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [pendingDelete, setPendingDelete] = useState<AccountView | null>(null)
 
   async function reload() {
@@ -78,25 +81,85 @@ export function AccountsScreen() {
     void reload()
   }, [])
 
-  async function onAdd(e: FormEvent) {
+  useEffect(() => {
+    if (!showForm) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !busy) resetForm()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [showForm, busy])
+
+  function resetForm() {
+    setAlias('')
+    setApiKey('')
+    setSecretKey('')
+    setPassphrase('')
+    setExchange('binance')
+    setEditingId(null)
+    setFormError(null)
+    setShowForm(false)
+  }
+
+  function startAdd() {
+    setAlias('')
+    setApiKey('')
+    setSecretKey('')
+    setPassphrase('')
+    setExchange('binance')
+    setEditingId(null)
+    setFormError(null)
+    setShowForm(true)
+  }
+
+  function startEdit(card: AccountView) {
+    setEditingId(card.meta.id)
+    setAlias(card.meta.alias)
+    setExchange(card.meta.exchange)
+    setApiKey('')
+    setSecretKey('')
+    setPassphrase('')
+    setFormError(null)
+    setShowForm(true)
+  }
+
+  async function onSave(e: FormEvent) {
     e.preventDefault()
     setBusy(true)
     setFormError(null)
     try {
+      const existing = editingId ? await getCredentials(editingId) : null
+      const nextKey = apiKey.trim()
+      const nextSecret = secretKey.trim()
+      const nextPass = passphrase.trim()
+
       const creds = {
-        apiKey: apiKey.trim(),
-        secretKey: secretKey.trim(),
-        passphrase: exchange === 'okx' ? passphrase.trim() : undefined,
+        apiKey: nextKey || existing?.apiKey || '',
+        secretKey: nextSecret || existing?.secretKey || '',
+        passphrase:
+          exchange === 'okx'
+            ? nextPass || existing?.passphrase || undefined
+            : undefined,
       }
+
       if (!creds.apiKey || !creds.secretKey) {
-        throw new Error('API key and secret are required')
+        throw new Error(
+          editingId
+            ? 'Enter new API key and secret, or keep both blank only when keys already exist'
+            : 'API key and secret are required',
+        )
       }
       if (exchange === 'okx' && !creds.passphrase) {
         throw new Error('OKX passphrase is required')
       }
 
+      // When editing, blank key fields mean keep existing — require both if replacing either.
+      if (editingId && ((nextKey && !nextSecret) || (!nextKey && nextSecret))) {
+        throw new Error('To rotate keys, enter both API key and secret')
+      }
+
       let validated = false
-      if (online) {
+      if (online && (nextKey || nextSecret || !editingId)) {
         try {
           await getExchange(exchange).validateCredentials(creds)
           validated = true
@@ -109,30 +172,33 @@ export function AccountsScreen() {
         }
       }
 
-      const id = crypto.randomUUID()
+      const id = editingId ?? crypto.randomUUID()
+      const prev = editingId ? cards.find((c) => c.meta.id === editingId)?.meta : undefined
       const meta: AccountMeta = {
         id,
-        alias: alias.trim() || `${exchange} account`,
-        exchange,
-        createdAt: Date.now(),
+        alias: alias.trim() || prev?.alias || `${exchange} account`,
+        exchange: prev?.exchange ?? exchange,
+        createdAt: prev?.createdAt ?? Date.now(),
       }
+      const wasEdit = Boolean(editingId)
       await saveCredentials(id, creds)
       await upsertAccount(meta)
-      setAlias('')
-      setApiKey('')
-      setSecretKey('')
-      setPassphrase('')
-      setShowForm(false)
+      await refreshAccounts()
+      resetForm()
       await reload()
       if (validated) {
-        setToast('Account saved and verified with the exchange')
+        setToast(wasEdit ? 'Account updated and verified' : 'Account saved and verified with the exchange')
       } else if (online) {
-        setToast('Account saved on this device (browser cannot verify keys — use Android app or Refresh later)')
+        setToast(
+          wasEdit
+            ? 'Account updated on this device'
+            : 'Account saved on this device (browser cannot verify keys — use Android app or Refresh later)',
+        )
       } else {
-        setToast('Account saved (offline — not verified yet)')
+        setToast(wasEdit ? 'Account updated (offline)' : 'Account saved (offline — not verified yet)')
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to add account'
+      const message = err instanceof Error ? err.message : 'Failed to save account'
       setFormError(message)
       setToast(message)
     } finally {
@@ -144,6 +210,7 @@ export function AccountsScreen() {
     if (!pendingDelete) return
     await deleteCredentials(pendingDelete.meta.id)
     await deleteAccountMeta(pendingDelete.meta.id)
+    await refreshAccounts()
     setPendingDelete(null)
     await reload()
     setToast('Account removed from this device')
@@ -156,11 +223,17 @@ export function AccountsScreen() {
           <p className="eyebrow">Wallet</p>
           <h2>Accounts</h2>
         </div>
-        <button type="button" className="btn primary btn-compact" onClick={() => setShowForm((v) => !v)}>
+        <button
+          type="button"
+          className="btn primary btn-compact"
+          onClick={() => (showForm ? resetForm() : startAdd())}
+        >
           {showForm ? 'Close' : '+ Add'}
         </button>
       </div>
-      <p className="muted tight">API keys stay encrypted on this device. Tap an account to open its portfolio.</p>
+      <p className="muted tight">
+        API keys stay encrypted on this device. Tap an account for portfolio, or Edit to change alias / keys.
+      </p>
 
       <div className="asset-list">
         {cards.map((card) => {
@@ -176,11 +249,13 @@ export function AccountsScreen() {
               <button
                 type="button"
                 className="account-link"
-                onClick={() =>
+                onClick={() => {
+                  setAccountId(meta.id)
+                  void refreshAccounts()
                   navigate('/', {
                     state: { accountId: meta.id, tab: 'assets' },
                   })
-                }
+                }}
               >
                 <ExchangeMark exchange={meta.exchange} />
                 <div className="asset-main">
@@ -202,13 +277,26 @@ export function AccountsScreen() {
                   <strong className={sparkUp ? 'up' : 'down'}>{formatMoney(usdt)}</strong>
                 </div>
               </button>
-              <button
-                type="button"
-                className="btn danger btn-compact"
-                onClick={() => setPendingDelete(card)}
-              >
-                Delete
-              </button>
+              <div className="account-actions">
+                <button
+                  type="button"
+                  className="icon-btn account-action-btn"
+                  aria-label={`Edit ${meta.alias}`}
+                  title="Edit"
+                  onClick={() => startEdit(card)}
+                >
+                  <EditIcon />
+                </button>
+                <button
+                  type="button"
+                  className="icon-btn account-action-btn danger"
+                  aria-label={`Delete ${meta.alias}`}
+                  title="Delete"
+                  onClick={() => setPendingDelete(card)}
+                >
+                  <TrashIcon />
+                </button>
+              </div>
             </div>
           )
         })}
@@ -218,49 +306,132 @@ export function AccountsScreen() {
       </div>
 
       {showForm && (
-        <form className="panel" onSubmit={(e) => void onAdd(e)}>
-          <h3>Add account</h3>
-          <label>
-            Alias
-            <input value={alias} onChange={(e) => setAlias(e.target.value)} placeholder="Main Binance" />
-          </label>
-          <div className="side-toggle">
-            <button
-              type="button"
-              className={`side-btn exchange-pick binance ${exchange === 'binance' ? 'active' : ''}`}
-              onClick={() => setExchange('binance')}
-            >
-              <ExchangeMark exchange="binance" compact />
-              Binance
-            </button>
-            <button
-              type="button"
-              className={`side-btn exchange-pick okx ${exchange === 'okx' ? 'active' : ''}`}
-              onClick={() => setExchange('okx')}
-            >
-              <ExchangeMark exchange="okx" compact />
-              OKX
-            </button>
-          </div>
-          <label>
-            API key
-            <input value={apiKey} onChange={(e) => setApiKey(e.target.value)} required autoComplete="off" />
-          </label>
-          <label>
-            Secret key
-            <input value={secretKey} onChange={(e) => setSecretKey(e.target.value)} required autoComplete="off" />
-          </label>
-          {exchange === 'okx' && (
-            <label>
-              Passphrase
-              <input value={passphrase} onChange={(e) => setPassphrase(e.target.value)} required autoComplete="off" />
-            </label>
-          )}
-          {formError && <div className="banner danger">{formError}</div>}
-          <button type="submit" className="btn primary block" disabled={busy}>
-            {busy ? 'Saving…' : 'Save account'}
-          </button>
-        </form>
+        <div
+          className="confirm-backdrop account-modal-backdrop"
+          role="presentation"
+          onClick={() => !busy && resetForm()}
+        >
+          <form
+            className={`account-modal ${editingId ? 'edit' : 'add'} ${exchange}`}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="account-modal-title"
+            onClick={(e) => e.stopPropagation()}
+            onSubmit={(e) => void onSave(e)}
+          >
+            <div className="account-modal-glow" aria-hidden="true" />
+            <div className="account-modal-head">
+              <div className="account-modal-brand">
+                <ExchangeMark exchange={exchange} />
+                <div>
+                  <p className="eyebrow">{editingId ? 'Wallet' : 'New connection'}</p>
+                  <h3 id="account-modal-title">{editingId ? 'Edit account' : 'Add account'}</h3>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="icon-btn account-modal-x"
+                aria-label="Close"
+                disabled={busy}
+                onClick={() => resetForm()}
+              >
+                ×
+              </button>
+            </div>
+
+            <p className="account-modal-lead">
+              {editingId
+                ? 'Update the nickname or rotate API keys. Leave key fields blank to keep the current secrets.'
+                : 'Keys are encrypted on this device. Pick an exchange and paste Spot API credentials.'}
+            </p>
+
+            <div className="account-modal-fields">
+              <label>
+                Alias
+                <input
+                  value={alias}
+                  onChange={(e) => setAlias(e.target.value)}
+                  placeholder="Main Binance"
+                  autoFocus
+                />
+              </label>
+
+              {!editingId ? (
+                <div className="side-toggle">
+                  <button
+                    type="button"
+                    className={`side-btn exchange-pick binance ${exchange === 'binance' ? 'active' : ''}`}
+                    onClick={() => setExchange('binance')}
+                  >
+                    <ExchangeMark exchange="binance" compact />
+                    Binance
+                  </button>
+                  <button
+                    type="button"
+                    className={`side-btn exchange-pick okx ${exchange === 'okx' ? 'active' : ''}`}
+                    onClick={() => setExchange('okx')}
+                  >
+                    <ExchangeMark exchange="okx" compact />
+                    OKX
+                  </button>
+                </div>
+              ) : (
+                <div className="account-modal-exchange">
+                  <span className={`pill exchange ${exchange}`}>
+                    {exchange === 'binance' ? 'Binance' : 'OKX'} Spot
+                  </span>
+                  <span className="muted tight">Exchange cannot be changed</span>
+                </div>
+              )}
+
+              <label>
+                API key
+                <input
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  required={!editingId}
+                  autoComplete="off"
+                  placeholder={editingId ? 'Leave blank to keep current key' : 'Paste API key'}
+                />
+              </label>
+              <label>
+                Secret key
+                <input
+                  value={secretKey}
+                  onChange={(e) => setSecretKey(e.target.value)}
+                  required={!editingId}
+                  autoComplete="off"
+                  type="password"
+                  placeholder={editingId ? 'Leave blank to keep current secret' : 'Paste secret key'}
+                />
+              </label>
+              {exchange === 'okx' && (
+                <label>
+                  Passphrase
+                  <input
+                    value={passphrase}
+                    onChange={(e) => setPassphrase(e.target.value)}
+                    required={!editingId}
+                    autoComplete="off"
+                    type="password"
+                    placeholder={editingId ? 'Leave blank to keep current passphrase' : 'OKX passphrase'}
+                  />
+                </label>
+              )}
+            </div>
+
+            {formError && <div className="banner danger">{formError}</div>}
+
+            <div className="confirm-actions account-modal-actions">
+              <button type="button" className="btn" disabled={busy} onClick={() => resetForm()}>
+                Close
+              </button>
+              <button type="submit" className="btn primary" disabled={busy}>
+                {busy ? 'Saving…' : 'Save'}
+              </button>
+            </div>
+          </form>
+        </div>
       )}
 
       <ConfirmDialog
@@ -277,6 +448,26 @@ export function AccountsScreen() {
 
       <Toast message={toast} onClose={() => setToast(null)} />
     </div>
+  )
+}
+
+function EditIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3Z" strokeLinejoin="round" />
+      <path d="M13.5 6.5l3 3" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function TrashIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M5 7h14" strokeLinecap="round" />
+      <path d="M9 7V5h6v2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M9 11v6M12 11v6M15 11v6" strokeLinecap="round" />
+      <path d="M7 7l1 12a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2l1-12" strokeLinejoin="round" />
+    </svg>
   )
 }
 

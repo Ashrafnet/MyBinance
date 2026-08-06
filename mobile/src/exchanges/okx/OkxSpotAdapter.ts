@@ -11,7 +11,9 @@ import { restBase, wsPublic } from '../endpoints'
 import { httpRequest } from '../http'
 import type { IExchange } from '../types'
 import { ExchangeError } from '../types'
+import { assertOkxNotRateLimited, noteOkxApiError } from './rateLimit'
 import { signOkx } from './sign'
+import { okxTimestampIso, syncOkxServerTime } from './serverTime'
 
 function rest() {
   return restBase('okx')
@@ -23,6 +25,9 @@ function ws() {
 
 type OkxResp<T> = { code: string; msg: string; data: T }
 
+/** Cap history page size — keep private REST light (same idea as Binance symbol cap). */
+const MAX_HISTORY_LIMIT = 30
+
 async function privateRequest<T>(
   creds: AccountCredentials,
   method: 'GET' | 'POST',
@@ -30,24 +35,34 @@ async function privateRequest<T>(
   bodyObj?: Record<string, unknown>,
 ): Promise<T> {
   if (!creds.passphrase) throw new ExchangeError('OKX passphrase required')
+  assertOkxNotRateLimited()
+  await syncOkxServerTime()
   const body = bodyObj ? JSON.stringify(bodyObj) : ''
-  const timestamp = new Date().toISOString()
+  const timestamp = okxTimestampIso()
   const sign = await signOkx(timestamp, method, path, body, creds.secretKey)
   const url = `${rest()}${path}`
-  const data = await httpRequest<OkxResp<T>>({
-    url,
-    method,
-    headers: {
-      'OK-ACCESS-KEY': creds.apiKey,
-      'OK-ACCESS-SIGN': sign,
-      'OK-ACCESS-TIMESTAMP': timestamp,
-      'OK-ACCESS-PASSPHRASE': creds.passphrase,
-      ...(body ? { 'Content-Type': 'application/json' } : {}),
-    },
-    body: body || undefined,
-  })
-  if (data.code !== '0') throw new ExchangeError(data.msg || 'OKX error', data.code)
-  return data.data
+  try {
+    const data = await httpRequest<OkxResp<T>>({
+      url,
+      method,
+      headers: {
+        'OK-ACCESS-KEY': creds.apiKey,
+        'OK-ACCESS-SIGN': sign,
+        'OK-ACCESS-TIMESTAMP': timestamp,
+        'OK-ACCESS-PASSPHRASE': creds.passphrase,
+        ...(body ? { 'Content-Type': 'application/json' } : {}),
+      },
+      body: body || undefined,
+    })
+    if (data.code !== '0') {
+      noteOkxApiError(data.msg || 'OKX error', data.code)
+      throw new ExchangeError(data.msg || 'OKX error', data.code)
+    }
+    return data.data
+  } catch (e) {
+    if (e instanceof Error) noteOkxApiError(e.message, e instanceof ExchangeError ? e.code : undefined)
+    throw e
+  }
 }
 
 function toBinanceLikeSymbol(instId: string): string {
@@ -142,7 +157,7 @@ export class OkxSpotAdapter implements IExchange {
     const data = await privateRequest<Array<Record<string, string>>>(
       creds,
       'GET',
-      '/api/v5/trade/orders-history?instType=SPOT&limit=50',
+      `/api/v5/trade/orders-history?instType=SPOT&limit=${MAX_HISTORY_LIMIT}`,
     )
     return data.map((o) => mapOrder(o, accountId))
   }

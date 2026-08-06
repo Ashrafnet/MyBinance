@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { AccountMeta, ExchangeId } from '../domain/types'
+import { useAccountFilter } from '../app/AccountFilterContext'
 import { cacheGetBalances, cacheGetTickers, listAccounts } from '../storage/cache'
 import { formatMoney, formatUnitPrice, sumBtc, sumUsdt } from '../services/valuation'
 import { AssetIcon } from '../components/AssetIcon'
 
 export function SummaryScreen() {
   const navigate = useNavigate()
+  const { accountId } = useAccountFilter()
   const [usdt, setUsdt] = useState(0)
   const [btc, setBtc] = useState(0)
   const [btcPrice, setBtcPrice] = useState(0)
@@ -24,9 +26,10 @@ export function SummaryScreen() {
         okx: accs.filter((a) => a.exchange === 'okx').length,
       })
 
+      const scoped = accountId === 'all' ? accs : accs.filter((a) => a.id === accountId)
       const rows = []
       const assets = new Set<string>()
-      for (const a of accs) {
+      for (const a of scoped) {
         const bal = await cacheGetBalances(a.id)
         rows.push(...bal)
         for (const b of bal) if (b.total > 0) assets.add(b.asset)
@@ -49,7 +52,7 @@ export function SummaryScreen() {
         setBtcChange(null)
       }
     })()
-  }, [])
+  }, [accountId])
 
   const up = (btcChange ?? 0) >= 0
   const accountCount = accounts.length

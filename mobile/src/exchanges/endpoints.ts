@@ -17,3 +17,10 @@ export function wsPublic(exchange: ExchangeId): string {
     ? 'wss://stream.binance.com:9443/ws'
     : 'wss://ws.okx.com:8443/ws/v5/public'
 }
+
+/** Authenticated account/order streams (not proxied — browser connects directly). */
+export function wsPrivate(exchange: ExchangeId): string {
+  return exchange === 'binance'
+    ? 'wss://stream.binance.com:9443/ws'
+    : 'wss://ws.okx.com:8443/ws/v5/private'
+}

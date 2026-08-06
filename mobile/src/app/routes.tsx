@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { useAuth } from './AuthContext'
+import { AccountFilterProvider } from './AccountFilterContext'
 import { UnlockScreen } from '../screens/UnlockScreen'
 import { MoreScreen, ShellLayout } from '../screens/ShellLayout'
 import { PortfolioScreen } from '../screens/PortfolioScreen'
@@ -25,7 +26,9 @@ export function AppRoutes() {
         path="/"
         element={
           <RequireAuth>
-            <ShellLayout />
+            <AccountFilterProvider>
+              <ShellLayout />
+            </AccountFilterProvider>
           </RequireAuth>
         }
       >

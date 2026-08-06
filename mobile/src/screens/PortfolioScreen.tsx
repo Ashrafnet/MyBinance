@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import type { AccountMeta, BalanceRow, TickerRow } from '../domain/types'
+import type { BalanceRow, TickerRow } from '../domain/types'
 import { cacheGetBalances, cacheGetSyncMeta, cacheGetTickers, getSettings, listAccounts } from '../storage/cache'
 import { getFavorites, setFavorites, toggleFavorite } from '../storage/favorites'
+import { explainSyncError, formatExchangeSyncError, type SyncErrorInfo } from '../exchanges/formatSyncError'
+import { ACCOUNT_LIVE_EVENT } from '../services/accountLive'
 import { syncAll } from '../services/sync'
 import { formatMoney, formatUnitPrice, sumBtc, sumUsdt, unitPriceUsdt } from '../services/valuation'
+import { useAccountFilter } from '../app/AccountFilterContext'
 import { useOnline } from '../app/OnlineContext'
+import { SyncErrorBanner } from '../components/SyncErrorBanner'
 import { Toast } from '../components/Toast'
 import { AppSelect } from '../components/AppSelect'
 import { AssetIcon, baseAsset } from '../components/AssetIcon'
@@ -48,8 +52,7 @@ export function PortfolioScreen() {
   const online = useOnline()
   const location = useLocation()
   const navigate = useNavigate()
-  const [accounts, setAccounts] = useState<AccountMeta[]>([])
-  const [accountId, setAccountId] = useState<string>('all')
+  const { accountId, setAccountId, accounts, refreshAccounts } = useAccountFilter()
   const [rows, setRows] = useState<BalanceRow[]>([])
   const [tickers, setTickers] = useState<Map<string, TickerRow>>(() => new Map())
   const [favorites, setFavs] = useState<string[]>([])
@@ -61,7 +64,7 @@ export function PortfolioScreen() {
   const [expandedAsset, setExpandedAsset] = useState<string | null>(null)
   const [lastSync, setLastSync] = useState<string>('Never')
   const [lastSyncAt, setLastSyncAt] = useState<number | null>(null)
-  const [syncError, setSyncError] = useState<string | null>(null)
+  const [syncError, setSyncError] = useState<SyncErrorInfo | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -81,8 +84,8 @@ export function PortfolioScreen() {
   }, [tab, accountId, sort, hideSmall, q])
 
   const load = useCallback(async () => {
+    await refreshAccounts()
     const accs = await listAccounts()
-    setAccounts(accs)
     const settings = await getSettings()
     setDust(settings.dustUsdt)
     setFavs(await getFavorites())
@@ -93,14 +96,14 @@ export function PortfolioScreen() {
     const ids = accountId === 'all' ? accs.map((a) => a.id) : [accountId]
     const all: BalanceRow[] = []
     let latest = 0
-    const errors: string[] = []
+    let firstError: SyncErrorInfo | null = null
     for (const id of ids) {
       all.push(...(await cacheGetBalances(id)))
       const meta = await cacheGetSyncMeta(id)
       if (meta?.lastSyncAt && meta.lastSyncAt > latest) latest = meta.lastSyncAt
-      if (meta?.lastError) {
+      if (meta?.lastError && !firstError) {
         const alias = accs.find((a) => a.id === id)?.alias ?? id
-        errors.push(`${alias}: ${meta.lastError}`)
+        firstError = explainSyncError(meta.lastError, alias)
       }
     }
     const map = new Map<string, BalanceRow>()
@@ -121,11 +124,19 @@ export function PortfolioScreen() {
     setRows([...map.values()].sort((a, b) => b.usdtValue - a.usdtValue))
     setLastSyncAt(latest || null)
     setLastSync(latest ? formatHumanTime(latest) : 'Never')
-    setSyncError(errors.length ? errors.join(' · ') : null)
-  }, [accountId])
+    setSyncError(firstError)
+  }, [accountId, refreshAccounts])
 
   useEffect(() => {
     void load()
+  }, [load])
+
+  useEffect(() => {
+    const onLive = () => {
+      void load()
+    }
+    window.addEventListener(ACCOUNT_LIVE_EVENT, onLive)
+    return () => window.removeEventListener(ACCOUNT_LIVE_EVENT, onLive)
   }, [load])
 
   const prices = useMemo(() => new Map([...tickers.entries()].map(([s, t]) => [s, t.last])), [tickers])
@@ -182,15 +193,17 @@ export function PortfolioScreen() {
       const errors = await syncAll()
       await load()
       if (errors.length) {
-        setSyncError(errors.join(' · '))
-        setToast(errors.join('; '))
+        const info = explainSyncError(errors[0]!)
+        setSyncError(info)
+        setToast(formatExchangeSyncError(errors[0]!))
       } else {
         setToast('Portfolio synced')
       }
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Sync failed'
-      setSyncError(msg)
-      setToast(msg)
+      const raw = e instanceof Error ? e.message : 'Sync failed'
+      const info = explainSyncError(raw)
+      setSyncError(info)
+      setToast(formatExchangeSyncError(raw))
     } finally {
       setBusy(false)
     }
@@ -323,7 +336,7 @@ export function PortfolioScreen() {
         </p>
       </section>
 
-      {syncError && <div className="banner danger">{syncError}</div>}
+      {syncError && <SyncErrorBanner error={syncError} onDismiss={() => setSyncError(null)} />}
 
       <div className="tabs tabs-stretch portfolio-tabs">
         <button
@@ -339,19 +352,6 @@ export function PortfolioScreen() {
       </div>
 
       <div className="chip-row">
-        <AppSelect
-          icon="wallet"
-          value={accountId}
-          onChange={setAccountId}
-          options={[
-            { value: 'all', label: 'All accounts', hint: 'Combined Spot' },
-            ...accounts.map((a) => ({
-              value: a.id,
-              label: a.alias,
-              hint: a.exchange === 'binance' ? 'Binance Spot' : 'OKX Spot',
-            })),
-          ]}
-        />
         <input
           className="search-pill"
           placeholder="Search"

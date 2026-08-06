@@ -2,8 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { AccountMeta, HistoryAsset, HistoryPoint } from '../domain/types'
 import { cacheGetHistory, listAccounts } from '../storage/cache'
 import { syncAccount, syncAll, syncHistoryRange } from '../services/sync'
+import { useAccountFilter } from '../app/AccountFilterContext'
 import { useOnline } from '../app/OnlineContext'
-import { AppSelect } from '../components/AppSelect'
 import { AssetIcon } from '../components/AssetIcon'
 import { Toast } from '../components/Toast'
 import { formatMoney } from '../services/valuation'
@@ -184,8 +184,7 @@ function buildDayCards(
 
 export function HistoryScreen() {
   const online = useOnline()
-  const [accounts, setAccounts] = useState<AccountMeta[]>([])
-  const [accountId, setAccountId] = useState('all')
+  const { accountId, accounts, refreshAccounts } = useAccountFilter()
   const [points, setPoints] = useState<Array<HistoryPoint & { id: string }>>([])
   const [busy, setBusy] = useState(false)
   const [expanded, setExpanded] = useState<string | null>(null)
@@ -215,8 +214,8 @@ export function HistoryScreen() {
 
   useEffect(() => {
     void (async () => {
+      await refreshAccounts()
       const accs = await listAccounts()
-      setAccounts(accs)
       const all = await loadPoints(accs, accountId)
       const missingAssets = all.some((p) => !p.assets?.length)
       if (!missingAssets || !online || backfillTried.current) return
@@ -232,7 +231,7 @@ export function HistoryScreen() {
         setBusy(false)
       }
     })()
-  }, [accountId, online])
+  }, [accountId, online, refreshAccounts])
 
   function applyPreset(days: number) {
     const to = ymdLocal(new Date())
@@ -271,8 +270,8 @@ export function HistoryScreen() {
         endTime: parseYmdEnd(clamped.to),
       }
       const errors = await syncHistoryRange(accountId, range)
+      await refreshAccounts()
       const accs = await listAccounts()
-      setAccounts(accs)
       await loadPoints(accs, accountId)
       if (errors.length) setToast(errors.join(' · '))
     } catch (e) {
@@ -303,21 +302,6 @@ export function HistoryScreen() {
           {busy ? '…' : 'Load'}
         </button>
       </div>
-
-      <AppSelect
-        fullWidth
-        icon="wallet"
-        value={accountId}
-        onChange={setAccountId}
-        options={[
-          { value: 'all', label: 'All accounts', hint: 'Combined' },
-          ...accounts.map((a) => ({
-            value: a.id,
-            label: a.alias,
-            hint: a.exchange === 'binance' ? 'Binance' : 'OKX',
-          })),
-        ]}
-      />
 
       <div className="history-range panel">
         <div className="history-range-presets">
@@ -383,29 +367,67 @@ export function HistoryScreen() {
                 aria-expanded={open}
                 onClick={() => setExpanded(open ? null : card.id)}
               >
-                <div className="asset-avatar">$</div>
-                <div className="asset-main">
-                  <strong title={formatAbsoluteDate(card.date)}>{formatHumanDate(card.date)}</strong>
-                  <span>
-                    {assetCount > 0
-                      ? `${assetCount} asset${assetCount === 1 ? '' : 's'}`
-                      : 'Daily snapshot'}
-                    {delta != null
-                      ? ` · ${formatMoney(delta, { signed: true })} vs prior`
-                      : ''}
-                  </span>
-                </div>
-                <div className="history-side">
-                  <strong>{formatMoney(card.usdtValue)}</strong>
-                  {deltaPct != null ? (
-                    <span className={up ? 'up' : 'down'}>
-                      {up ? '+' : ''}
-                      {deltaPct.toFixed(2)}%
+                <span className="history-accent" aria-hidden="true" />
+                <div className="history-body">
+                  <div className="history-top">
+                    <div className="history-date-block">
+                      <strong className="history-date" title={formatAbsoluteDate(card.date)}>
+                        {formatHumanDate(card.date)}
+                      </strong>
+                      <span className="history-date-sub">{card.date}</span>
+                    </div>
+                    <div className="history-value-block">
+                      <strong className="history-value">{formatMoney(card.usdtValue)}</strong>
+                      {deltaPct != null ? (
+                        <span className={`history-delta-pill ${up ? 'up' : 'down'}`}>
+                          {up ? '▲' : '▼'} {up ? '+' : ''}
+                          {deltaPct.toFixed(2)}%
+                          {delta != null ? ` · ${formatMoney(delta, { signed: true })}` : ''}
+                        </span>
+                      ) : (
+                        <span className="history-delta-pill muted">Spot portfolio</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="history-tags" aria-label="Snapshot type and accounts">
+                    {accountId === 'all' ? (
+                      <span className="pill history-tag combined" title="Sum of Spot value across accounts">
+                        Combined Spot
+                      </span>
+                    ) : (
+                      <span className="pill history-tag single" title="Selected account Spot value">
+                        Spot snapshot
+                      </span>
+                    )}
+                    {(accountId === 'all' ? card.accounts : card.accounts.slice(0, 1)).map((a) => (
+                      <span
+                        key={a.accountId}
+                        className={`pill exchange history-account-tag ${a.exchange}`}
+                        title={`${a.alias} · ${formatMoney(a.usdtValue)}`}
+                      >
+                        <em>{a.exchange === 'binance' ? 'B' : 'O'}</em>
+                        {a.alias}
+                        {accountId === 'all' && card.accounts.length > 1 ? (
+                          <i>{formatMoney(a.usdtValue)}</i>
+                        ) : null}
+                      </span>
+                    ))}
+                  </div>
+
+                  <div className="history-foot">
+                    <span>
+                      {assetCount > 0
+                        ? `${assetCount} asset${assetCount === 1 ? '' : 's'}`
+                        : 'No asset breakdown yet'}
+                      {accountId === 'all' && card.accounts.length > 1
+                        ? ` · ${card.accounts.length} accounts`
+                        : ''}
                     </span>
-                  ) : (
-                    <span>Spot value</span>
-                  )}
-                  <span className="order-chevron">{open ? '▴' : '▾'}</span>
+                    <span className="history-chevron" aria-hidden="true">
+                      {open ? '▴' : '▾'}
+                    </span>
+                  </div>
                 </div>
               </button>
 

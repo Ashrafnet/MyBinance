@@ -1,7 +1,12 @@
+import { useEffect } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { OfflineBanner } from '../components/OfflineBanner'
+import { AppSelect } from '../components/AppSelect'
+import { useAccountFilter } from '../app/AccountFilterContext'
 import { useAuth } from '../app/AuthContext'
+import { useConnectionStatus } from '../app/ConnectionStatus'
 import { useOnline } from '../app/OnlineContext'
+import { startAccountLiveStreams } from '../services/accountLive'
 
 const primaryTabs = [
   { to: '/', label: 'Home', end: true, icon: HomeIcon },
@@ -14,10 +19,27 @@ const primaryTabs = [
 export function ShellLayout() {
   const auth = useAuth()
   const online = useOnline()
+  const connection = useConnectionStatus()
+  const { accountId, setAccountId, accounts } = useAccountFilter()
   const location = useLocation()
   const moreActive = ['/history', '/summary', '/settings', '/more'].some((p) =>
     location.pathname.startsWith(p),
   )
+
+  // Private user-data WebSockets (Binance listenKey + OKX private) — balances/orders without REST spam.
+  useEffect(() => {
+    if (!online || !auth.unlocked) return
+    let stop: (() => void) | undefined
+    let alive = true
+    void startAccountLiveStreams().then((s) => {
+      if (!alive) s()
+      else stop = s
+    })
+    return () => {
+      alive = false
+      stop?.()
+    }
+  }, [online, auth.unlocked, accounts.length])
 
   return (
     <div className="phone-stage">
@@ -28,14 +50,34 @@ export function ShellLayout() {
               <div className="brand">
                 My<span>Exchanges</span>
               </div>
-              <div className="brand-status">
-                <span className={`blotter-dot ${online ? '' : 'off'}`} />
-                {online ? 'Live' : 'Offline'}
+              <div className="brand-status" title={connection.title}>
+                <span
+                  className={`blotter-dot ${
+                    connection.tone === 'offline' ? 'off' : connection.tone === 'limited' ? 'warn' : ''
+                  }`}
+                />
+                {connection.label}
               </div>
             </div>
             <button type="button" className="icon-btn" aria-label="Lock" onClick={() => auth.lock()}>
               <LockIcon />
             </button>
+          </div>
+          <div className="topbar-account">
+            <AppSelect
+              fullWidth
+              icon="wallet"
+              value={accountId}
+              onChange={setAccountId}
+              options={[
+                { value: 'all', label: 'All accounts', hint: 'Combined Spot' },
+                ...accounts.map((a) => ({
+                  value: a.id,
+                  label: a.alias,
+                  hint: a.exchange === 'binance' ? 'Binance Spot' : 'OKX Spot',
+                })),
+              ]}
+            />
           </div>
         </header>
 

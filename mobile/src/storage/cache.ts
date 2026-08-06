@@ -72,6 +72,31 @@ export async function cacheReplaceAccountOrders(accountId: string, orders: Order
   await tx.done
 }
 
+/**
+ * Replace open/partial orders for an account; merge history by id.
+ * Pass `history: null` when the history fetch failed — prior history rows are kept.
+ * Pass an array (including empty) to upsert those history rows without deleting other historical ids.
+ */
+export async function cacheMergeAccountOrders(
+  accountId: string,
+  open: OrderRow[],
+  history: OrderRow[] | null,
+) {
+  const db = await getDb()
+  const existing = await db.getAllFromIndex('orders', 'by-account', accountId)
+  const tx = db.transaction('orders', 'readwrite')
+  for (const o of existing) {
+    if (o.status === 'open' || o.status === 'partial') {
+      await tx.store.delete(o.id)
+    }
+  }
+  for (const o of open) await tx.store.put(o)
+  if (history) {
+    for (const o of history) await tx.store.put(o)
+  }
+  await tx.done
+}
+
 export async function cacheGetOpenOrders(accountId?: string): Promise<OrderRow[]> {
   const db = await getDb()
   const all = accountId

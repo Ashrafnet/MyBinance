@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import type { AccountMeta, OrderRow, OrderSide, OrderType, TickerRow } from '../domain/types'
+import type { OrderRow, OrderSide, OrderType, TickerRow } from '../domain/types'
 import {
   cacheGetOpenOrders,
   cacheGetOrderHistory,
@@ -10,21 +10,36 @@ import {
 } from '../storage/cache'
 import { getCredentials } from '../storage/vault'
 import { getExchange } from '../exchanges/registry'
+import { useAccountFilter } from '../app/AccountFilterContext'
 import { useOnline } from '../app/OnlineContext'
 import { Toast } from '../components/Toast'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { AssetIcon } from '../components/AssetIcon'
 import { AppSelect } from '../components/AppSelect'
+import { ACCOUNT_LIVE_EVENT } from '../services/accountLive'
 import { syncAccount } from '../services/sync'
 import { formatMoney, formatUnitPrice } from '../services/valuation'
 import { formatAbsoluteTime, formatHumanTime } from '../utils/time'
+import { orderListFingerprint } from '../utils/orderListFingerprint'
+
+async function loadOrdersForAccounts(ids: string[]) {
+  const openRows: OrderRow[] = []
+  const histRows: OrderRow[] = []
+  for (const id of ids) {
+    if (!id) continue
+    openRows.push(...(await cacheGetOpenOrders(id)))
+    histRows.push(...(await cacheGetOrderHistory(id)))
+  }
+  openRows.sort((a, b) => b.updatedAt - a.updatedAt)
+  histRows.sort((a, b) => b.updatedAt - a.updatedAt)
+  return { open: openRows, history: histRows }
+}
 
 export function OrdersScreen() {
   const online = useOnline()
   const navigate = useNavigate()
+  const { accountId, accounts, tradingAccountId, refreshAccounts } = useAccountFilter()
   const [tab, setTab] = useState<'open' | 'history' | 'place'>('open')
-  const [accounts, setAccounts] = useState<AccountMeta[]>([])
-  const [accountId, setAccountId] = useState('')
   const [open, setOpen] = useState<OrderRow[]>([])
   const [history, setHistory] = useState<OrderRow[]>([])
   const [toast, setToast] = useState<string | null>(null)
@@ -43,17 +58,32 @@ export function OrdersScreen() {
   const [symbolHi, setSymbolHi] = useState(0)
   const pricedSymbolRef = useRef('')
 
+  const scopedIds = useMemo(() => {
+    if (accountId === 'all') return accounts.map((a) => a.id)
+    return accountId ? [accountId] : []
+  }, [accountId, accounts])
+
   const load = useCallback(async () => {
+    await refreshAccounts()
     const accs = await listAccounts()
-    setAccounts(accs)
-    if (!accountId && accs[0]) setAccountId(accs[0].id)
-    const id = accountId || accs[0]?.id
-    setOpen(await cacheGetOpenOrders(id))
-    setHistory(await cacheGetOrderHistory(id))
-  }, [accountId])
+    const ids = accountId === 'all' ? accs.map((a) => a.id) : accountId ? [accountId] : []
+    const next = await loadOrdersForAccounts(ids)
+    setOpen((prev) => (orderListFingerprint(prev) === orderListFingerprint(next.open) ? prev : next.open))
+    setHistory((prev) =>
+      orderListFingerprint(prev) === orderListFingerprint(next.history) ? prev : next.history,
+    )
+  }, [accountId, refreshAccounts])
 
   useEffect(() => {
     void load()
+  }, [load])
+
+  useEffect(() => {
+    const onLive = () => {
+      void load()
+    }
+    window.addEventListener(ACCOUNT_LIVE_EVENT, onLive)
+    return () => window.removeEventListener(ACCOUNT_LIVE_EVENT, onLive)
   }, [load])
 
   useEffect(() => {
@@ -65,7 +95,7 @@ export function OrdersScreen() {
     void (async () => {
       let t = await cacheGetTickers()
       if (online && t.length === 0) {
-        const acc = accounts.find((a) => a.id === accountId)
+        const acc = accounts.find((a) => a.id === tradingAccountId)
         try {
           t = await getExchange(acc?.exchange ?? 'binance').fetchTickers()
         } catch {
@@ -74,7 +104,7 @@ export function OrdersScreen() {
       }
       setTickers(t.filter((x) => x.symbol.endsWith('USDT')))
     })()
-  }, [tab, online, accountId, accounts])
+  }, [tab, online, tradingAccountId, accounts])
 
   const symbolSuggestions = useMemo(() => {
     const q = symbol.trim().toUpperCase()
@@ -149,17 +179,30 @@ export function OrdersScreen() {
     fillPriceForSymbol(s, t.last)
   }, [symbol, tickers, type])
 
-  // History is exchange-backed; refresh when opening the tab so Binance/OKX fills the cache.
+  // Cache-first: paint from IndexedDB via `load`, then silently refresh online.
+  // Order history is Binance-heavy — only fetch when History tab is open.
   useEffect(() => {
-    if (tab !== 'history' || !online || !accountId) return
+    if (tab !== 'history' && tab !== 'open') return
+    if (!online || scopedIds.length === 0) return
     let alive = true
     void (async () => {
       setSyncBusy(true)
       try {
-        await syncAccount(accountId)
-        if (alive) await load()
-      } catch (e) {
-        if (alive) setToast(e instanceof Error ? e.message : 'Could not load history')
+        for (const id of scopedIds) {
+          try {
+            await syncAccount(id, { orderHistory: tab === 'history' })
+          } catch {
+            /* keep cache */
+          }
+        }
+        if (!alive) return
+        const next = await loadOrdersForAccounts(scopedIds)
+        setOpen((prev) =>
+          orderListFingerprint(prev) === orderListFingerprint(next.open) ? prev : next.open,
+        )
+        setHistory((prev) =>
+          orderListFingerprint(prev) === orderListFingerprint(next.history) ? prev : next.history,
+        )
       } finally {
         if (alive) setSyncBusy(false)
       }
@@ -167,7 +210,7 @@ export function OrdersScreen() {
     return () => {
       alive = false
     }
-  }, [tab, accountId, online, load])
+  }, [tab, scopedIds, online])
 
   async function confirmCancel() {
     const order = pendingCancel
@@ -194,14 +237,14 @@ export function OrdersScreen() {
 
   async function place(e: FormEvent) {
     e.preventDefault()
-    if (!online || !accountId) return
+    if (!online || !tradingAccountId) return
     try {
-      const acc = accounts.find((a) => a.id === accountId)
+      const acc = accounts.find((a) => a.id === tradingAccountId)
       if (!acc) throw new Error('Pick an account')
-      const creds = await getCredentials(accountId)
+      const creds = await getCredentials(tradingAccountId)
       if (!creds) throw new Error('Missing credentials')
       const order = await getExchange(acc.exchange).placeOrder(creds, {
-        accountId,
+        accountId: tradingAccountId,
         symbol: symbol.toUpperCase(),
         side,
         type,
@@ -209,7 +252,7 @@ export function OrdersScreen() {
         price: type === 'limit' ? Number(price) : undefined,
       })
       await cacheUpsertOrders([order])
-      await syncAccount(accountId)
+      await syncAccount(tradingAccountId)
       await load()
       setTab('open')
       setToast('Order placed')
@@ -220,27 +263,12 @@ export function OrdersScreen() {
 
   const list = tab === 'open' ? open : history
   const accountAlias = (id: string) => accounts.find((a) => a.id === id)?.alias ?? id
+  const tradingAlias = accountAlias(tradingAccountId)
 
   return (
     <div className="mobile-page">
       <p className="eyebrow">Trading</p>
       <h2>Orders</h2>
-
-      <AppSelect
-        fullWidth
-        icon="wallet"
-        value={accountId}
-        onChange={setAccountId}
-        options={
-          accounts.length
-            ? accounts.map((a) => ({
-                value: a.id,
-                label: a.alias,
-                hint: a.exchange === 'binance' ? 'Binance Spot' : 'OKX Spot',
-              }))
-            : [{ value: '', label: 'No accounts yet' }]
-        }
-      />
 
       <div className="tabs tabs-stretch">
         <button type="button" className={`btn ${tab === 'open' ? 'active' : ''}`} onClick={() => setTab('open')}>
@@ -256,6 +284,12 @@ export function OrdersScreen() {
 
       {tab === 'place' && (
         <form className="panel" onSubmit={(e) => void place(e)}>
+          {tradingAccountId && (
+            <p className="muted tight">
+              Placing on {tradingAlias}
+              {accountId === 'all' ? ' (first account — pick one in the top bar to choose)' : ''}
+            </p>
+          )}
           <div className="symbol-field">
             <label htmlFor="order-symbol">Symbol</label>
             <div className={`symbol-input-wrap ${matchedSymbol ? 'has-icon' : ''}`}>
@@ -356,7 +390,11 @@ export function OrdersScreen() {
               </label>
             )}
           </div>
-          <button type="submit" className={`btn block ${side === 'buy' ? 'buy' : 'sell'}`} disabled={!online}>
+          <button
+            type="submit"
+            className={`btn block ${side === 'buy' ? 'buy' : 'sell'}`}
+            disabled={!online || !tradingAccountId}
+          >
             {side === 'buy' ? 'Buy' : 'Sell'} {symbol.toUpperCase()}
           </button>
         </form>
@@ -480,23 +518,27 @@ export function OrdersScreen() {
                     <div className="order-detail-actions">
                       <button
                         type="button"
-                        className="btn primary btn-compact"
+                        className="icon-btn order-action-btn primary"
+                        aria-label="Open chart"
+                        title="Open chart"
                         onClick={() =>
                           navigate('/live', {
                             state: { symbol: o.symbol, view: 'chart', exchange: o.exchange },
                           })
                         }
                       >
-                        Open chart
+                        <ChartActionIcon />
                       </button>
                       {tab === 'open' && (
                         <button
                           type="button"
-                          className="btn danger btn-compact"
+                          className="icon-btn order-action-btn danger"
+                          aria-label="Cancel order"
+                          title="Cancel order"
                           disabled={!online}
                           onClick={() => setPendingCancel(o)}
                         >
-                          Cancel order
+                          <CancelOrderIcon />
                         </button>
                       )}
                     </div>
@@ -508,13 +550,20 @@ export function OrdersScreen() {
           {list.length === 0 && (
             <div className="empty-card">
               {tab === 'open'
-                ? 'No open orders.'
+                ? syncBusy
+                  ? 'Updating open orders…'
+                  : 'No open orders.'
                 : syncBusy
-                  ? 'Loading order history…'
+                  ? 'Updating order history…'
                   : !online
-                    ? 'Go online to load order history from the exchange.'
+                    ? 'No cached history yet. Go online to load from the exchange.'
                     : 'No filled or canceled orders found for your held assets.'}
             </div>
+          )}
+          {list.length > 0 && syncBusy && (
+            <p className="muted tight" aria-live="polite">
+              Updating…
+            </p>
           )}
         </div>
       )}
@@ -576,6 +625,24 @@ function SellIcon() {
     <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.2">
       <path d="M12 5v14" strokeLinecap="round" />
       <path d="M6.5 13.5 12 19l5.5-5.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function ChartActionIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M4 19V5M4 19h16" strokeLinecap="round" />
+      <path d="M8 15v-4M12 15V8M16 15v-6" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function CancelOrderIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <circle cx="12" cy="12" r="8" />
+      <path d="M9 9l6 6M15 9l-6 6" strokeLinecap="round" />
     </svg>
   )
 }

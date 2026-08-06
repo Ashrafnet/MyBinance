@@ -1,0 +1,651 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MyExchanges — Home top redesign concepts</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,500&family=Instrument+Serif:ital@0;1&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --ink: #101828;
+        --ink-2: #344054;
+        --grey: #667085;
+        --line: #e4e7ec;
+        --bg: #eef1f5;
+        --blue: #1f6fd6;
+        --green: #2f9e44;
+        --down: #e11d48;
+        --phone: 390px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: 'DM Sans', system-ui, sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(1000px 500px at 10% -10%, #d9e8ff 0%, transparent 55%),
+          radial-gradient(800px 400px at 90% 0%, #dff5ea 0%, transparent 50%),
+          var(--bg);
+      }
+
+      .page {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 28px 20px 48px;
+      }
+
+      .intro h1 {
+        margin: 0 0 8px;
+        font-family: 'Instrument Serif', Georgia, serif;
+        font-weight: 400;
+        font-size: clamp(2rem, 4vw, 2.8rem);
+        letter-spacing: -0.02em;
+      }
+
+      .intro p {
+        margin: 0 0 28px;
+        max-width: 52ch;
+        color: var(--ink-2);
+        line-height: 1.45;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 28px;
+      }
+
+      @media (max-width: 860px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .concept {
+        display: grid;
+        gap: 14px;
+      }
+
+      .concept header h2 {
+        margin: 0;
+        font-size: 1.15rem;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+      }
+
+      .concept header p {
+        margin: 4px 0 0;
+        color: var(--grey);
+        font-size: 0.9rem;
+        line-height: 1.4;
+      }
+
+      .stage {
+        display: grid;
+        place-items: start center;
+      }
+
+      .phone {
+        width: min(100%, var(--phone));
+        background: #f7f8fb;
+        border-radius: 36px;
+        border: 1px solid #d0d5dd;
+        box-shadow:
+          0 1px 0 rgba(255, 255, 255, 0.8) inset,
+          0 28px 50px rgba(16, 24, 40, 0.14);
+        overflow: hidden;
+      }
+
+      .notch {
+        height: 18px;
+        background: linear-gradient(#fff, #f7f8fb);
+      }
+
+      .tabbar {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 2px;
+        padding: 8px 10px calc(10px + env(safe-area-inset-bottom));
+        background: rgba(255, 255, 255, 0.94);
+        border-top: 1px solid var(--line);
+      }
+
+      .tabbar span {
+        display: grid;
+        place-items: center;
+        gap: 2px;
+        font-size: 0.62rem;
+        font-weight: 700;
+        color: var(--grey);
+      }
+
+      .tabbar span.active {
+        color: var(--blue);
+      }
+
+      .tabbar i {
+        width: 18px;
+        height: 18px;
+        border-radius: 6px;
+        background: currentColor;
+        opacity: 0.25;
+      }
+
+      .tabbar span.active i {
+        opacity: 0.9;
+        background: var(--blue);
+      }
+
+      .asset {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 14px;
+        margin: 0 14px 10px;
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+      }
+
+      .asset .coin {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: linear-gradient(145deg, #f3ba2f, #e09500);
+      }
+
+      .asset strong {
+        display: block;
+        font-size: 0.92rem;
+      }
+
+      .asset small {
+        color: var(--grey);
+        font-size: 0.75rem;
+      }
+
+      .asset .px {
+        margin-left: auto;
+        text-align: right;
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .asset .px em {
+        display: block;
+        font-style: normal;
+        color: var(--down);
+        font-size: 0.72rem;
+        font-weight: 700;
+      }
+
+      /* ========== Concept A ========== */
+      .a-shell {
+        background: #f3f5f8;
+      }
+
+      .a-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 16px 6px;
+        background: #fff;
+      }
+
+      .a-brand {
+        font-weight: 800;
+        font-size: 1.02rem;
+        letter-spacing: -0.03em;
+      }
+
+      .a-brand span {
+        color: var(--blue);
+      }
+
+      .a-lock {
+        width: 36px;
+        height: 36px;
+        border-radius: 12px;
+        border: 1px solid var(--line);
+        background: #fff;
+        display: grid;
+        place-items: center;
+        color: var(--ink-2);
+        font-size: 0.85rem;
+      }
+
+      .a-hero {
+        margin: 0;
+        padding: 18px 18px 16px;
+        background: linear-gradient(145deg, #1a5bb8 0%, #1f8f9a 100%);
+        color: #fff;
+      }
+
+      .a-hero-row {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .a-account {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 10px 5px 6px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.16);
+        border: 1px solid rgba(255, 255, 255, 0.22);
+        font-size: 0.72rem;
+        font-weight: 700;
+        margin-bottom: 12px;
+      }
+
+      .a-account b {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.25);
+        display: grid;
+        place-items: center;
+        font-size: 0.6rem;
+      }
+
+      .a-label {
+        margin: 0;
+        font-size: 0.68rem;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        opacity: 0.8;
+      }
+
+      .a-total {
+        margin: 4px 0 0;
+        font-size: 2rem;
+        font-weight: 800;
+        letter-spacing: -0.04em;
+        line-height: 1.05;
+      }
+
+      .a-sub {
+        margin: 6px 0 0;
+        font-size: 0.82rem;
+        opacity: 0.88;
+        font-weight: 600;
+      }
+
+      .a-refresh {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        border: none;
+        background: rgba(255, 255, 255, 0.95);
+        color: var(--blue);
+        font-size: 1.1rem;
+        font-weight: 700;
+      }
+
+      .a-seg {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 4px;
+        margin: 14px 14px 10px;
+        padding: 4px;
+        background: #e8edf3;
+        border-radius: 14px;
+      }
+
+      .a-seg button {
+        border: none;
+        background: transparent;
+        border-radius: 11px;
+        padding: 10px 8px;
+        font-weight: 750;
+        font-size: 0.84rem;
+        color: var(--grey);
+      }
+
+      .a-seg button.on {
+        background: #fff;
+        color: var(--blue);
+        box-shadow: 0 1px 3px rgba(16, 24, 40, 0.08);
+      }
+
+      .a-search {
+        margin: 0 14px 12px;
+        border: none;
+        background: #fff;
+        border-radius: 14px;
+        padding: 12px 14px;
+        width: calc(100% - 28px);
+        font: inherit;
+        font-weight: 600;
+        color: var(--ink);
+        box-shadow: 0 0 0 1px var(--line);
+      }
+
+      /* ========== Concept B ========== */
+      .b-shell {
+        background: #faf8f5;
+      }
+
+      .b-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 16px 0;
+      }
+
+      .b-status {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.72rem;
+        font-weight: 700;
+        color: var(--grey);
+      }
+
+      .b-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--green);
+        box-shadow: 0 0 0 3px rgba(47, 158, 68, 0.18);
+      }
+
+      .b-lock {
+        width: 34px;
+        height: 34px;
+        border-radius: 11px;
+        border: 1px solid #e7e0d6;
+        background: #fff;
+        display: grid;
+        place-items: center;
+        font-size: 0.8rem;
+      }
+
+      .b-title {
+        padding: 6px 16px 0;
+        font-family: 'Instrument Serif', Georgia, serif;
+        font-size: 1.85rem;
+        font-weight: 400;
+        letter-spacing: -0.02em;
+        line-height: 1.1;
+      }
+
+      .b-title em {
+        font-style: italic;
+        color: #0b6e4f;
+      }
+
+      .b-balance {
+        padding: 8px 16px 4px;
+      }
+
+      .b-balance .amt {
+        font-size: 2.35rem;
+        font-weight: 800;
+        letter-spacing: -0.045em;
+        line-height: 1;
+      }
+
+      .b-meta {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 8px;
+        flex-wrap: wrap;
+      }
+
+      .b-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: #fff;
+        border: 1px solid #e7e0d6;
+        font-size: 0.74rem;
+        font-weight: 700;
+        color: var(--ink-2);
+      }
+
+      .b-chip.ghost {
+        background: transparent;
+        color: var(--grey);
+      }
+
+      .b-actions {
+        display: flex;
+        gap: 8px;
+        padding: 12px 16px 0;
+      }
+
+      .b-actions button {
+        flex: 1;
+        min-height: 40px;
+        border-radius: 12px;
+        border: 1px solid #e7e0d6;
+        background: #fff;
+        font-weight: 750;
+        font-size: 0.84rem;
+        color: var(--ink-2);
+      }
+
+      .b-actions button.primary {
+        background: #0b6e4f;
+        border-color: #0b6e4f;
+        color: #fff;
+      }
+
+      .b-tabs {
+        display: flex;
+        gap: 18px;
+        padding: 16px 16px 8px;
+        border-bottom: 1px solid #ebe4da;
+        margin: 4px 0 10px;
+      }
+
+      .b-tabs button {
+        border: none;
+        background: none;
+        padding: 0 0 10px;
+        font-weight: 750;
+        font-size: 0.9rem;
+        color: var(--grey);
+        position: relative;
+      }
+
+      .b-tabs button.on {
+        color: var(--ink);
+      }
+
+      .b-tabs button.on::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 2px;
+        background: #0b6e4f;
+        border-radius: 2px;
+      }
+
+      .b-search-wrap {
+        padding: 0 16px 10px;
+      }
+
+      .b-search {
+        width: 100%;
+        border: none;
+        background: #fff;
+        border-radius: 14px;
+        padding: 11px 14px;
+        font: inherit;
+        font-weight: 600;
+        box-shadow: 0 0 0 1px #e7e0d6;
+      }
+
+      .b-shell .asset {
+        background: #fff;
+        border-color: #e7e0d6;
+      }
+
+      .legend {
+        margin-top: 8px;
+        padding: 12px 14px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.65);
+        border: 1px solid rgba(16, 24, 40, 0.06);
+        font-size: 0.82rem;
+        color: var(--ink-2);
+        line-height: 1.45;
+      }
+
+      .legend strong {
+        color: var(--ink);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <div class="intro">
+        <h1>Home top — two cleaner directions</h1>
+        <p>
+          Both cut the stacked “brand + account chip + big card + tabs + search” pile. Open this file in a browser
+          to compare. Circled area from your screenshot ≈ everything above the asset list.
+        </p>
+      </div>
+
+      <div class="grid">
+        <!-- Concept A -->
+        <section class="concept">
+          <header>
+            <h2>A — Hero absorbs chrome</h2>
+            <p>
+              Merge account into the balance block. Drop the separate white topbar strip under the brand. Tabs become a
+              compact segmented control; search stays light.
+            </p>
+          </header>
+          <div class="stage">
+            <div class="phone a-shell">
+              <div class="notch"></div>
+              <div class="a-top">
+                <div class="a-brand">My<span>Exchanges</span></div>
+                <div class="a-lock" title="Lock">⌂</div>
+              </div>
+              <div class="a-hero">
+                <div class="a-account"><b>☰</b> All accounts ▾</div>
+                <div class="a-hero-row">
+                  <div>
+                    <p class="a-label">Total balance</p>
+                    <p class="a-total">$103.00</p>
+                    <p class="a-sub">0.001597 BTC · Synced just now</p>
+                  </div>
+                  <button class="a-refresh" type="button" aria-label="Refresh">↻</button>
+                </div>
+              </div>
+              <div class="a-seg">
+                <button class="on" type="button">Favorites</button>
+                <button type="button">Assets</button>
+              </div>
+              <input class="a-search" placeholder="Search" />
+              <div class="asset">
+                <div class="coin"></div>
+                <div>
+                  <strong>BTC</strong>
+                  <small>BTCUSDT</small>
+                </div>
+                <div class="px">
+                  $64,503.99
+                  <em>−0.28%</em>
+                </div>
+              </div>
+              <div class="tabbar">
+                <span class="active"><i></i>Home</span>
+                <span><i></i>Trade</span>
+                <span><i></i>Markets</span>
+                <span><i></i>Wallet</span>
+                <span><i></i>More</span>
+              </div>
+            </div>
+          </div>
+          <div class="legend">
+            <strong>Wins:</strong> one visual stack instead of four bands. Account filter rides on the hero so the
+            topbar is only brand + lock.
+          </div>
+        </section>
+
+        <!-- Concept B -->
+        <section class="concept">
+          <header>
+            <h2>B — Editorial / airy</h2>
+            <p>
+              No gradient card. Big typographic balance, soft chips for account + sync, text tabs with an underline.
+              Calmer, less “dashboard”.
+            </p>
+          </header>
+          <div class="stage">
+            <div class="phone b-shell">
+              <div class="notch"></div>
+              <div class="b-top">
+                <div class="b-status"><span class="b-dot"></span> Live</div>
+                <div class="b-lock">⌂</div>
+              </div>
+              <div class="b-title">My <em>Exchanges</em></div>
+              <div class="b-balance">
+                <div class="amt">$103.00</div>
+                <div class="b-meta">
+                  <span class="b-chip">All accounts ▾</span>
+                  <span class="b-chip ghost">0.0016 BTC</span>
+                  <span class="b-chip ghost">Just now</span>
+                </div>
+              </div>
+              <div class="b-actions">
+                <button type="button">Favorites</button>
+                <button class="primary" type="button">Assets</button>
+              </div>
+              <div class="b-tabs" aria-hidden="true" style="display: none"></div>
+              <div class="b-search-wrap">
+                <input class="b-search" placeholder="Search assets" />
+              </div>
+              <div class="asset">
+                <div class="coin"></div>
+                <div>
+                  <strong>BTC</strong>
+                  <small>BTCUSDT</small>
+                </div>
+                <div class="px">
+                  $64,503.99
+                  <em>−0.28%</em>
+                </div>
+              </div>
+              <div class="tabbar">
+                <span class="active"><i></i>Home</span>
+                <span><i></i>Trade</span>
+                <span><i></i>Markets</span>
+                <span><i></i>Wallet</span>
+                <span><i></i>More</span>
+              </div>
+            </div>
+          </div>
+          <div class="legend">
+            <strong>Wins:</strong> removes the heavy blue card and the duplicate “MyExchanges + Live + account” bands.
+            Feels open; Favorites/Assets are equal action buttons instead of a second nav.
+          </div>
+        </section>
+      </div>
+    </div>
+  </body>
+</html>

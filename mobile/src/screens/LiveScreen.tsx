@@ -5,6 +5,7 @@ import { cacheGetCandles, cacheGetTickers, cacheUpsertCandles } from '../storage
 import { getFavorites, toggleFavorite } from '../storage/favorites'
 import { getExchange } from '../exchanges/registry'
 import { startLiveCandles, startLiveTickers } from '../services/pricesLive'
+import { useAccountFilter } from '../app/AccountFilterContext'
 import { useOnline } from '../app/OnlineContext'
 import {
   CandleChart,
@@ -105,8 +106,17 @@ function formatVol(n: number) {
 export function LiveScreen() {
   const online = useOnline()
   const location = useLocation()
+  const { accountId, accounts } = useAccountFilter()
+  const exchange = useMemo<ExchangeId>(() => {
+    if (accountId !== 'all') {
+      const acc = accounts.find((a) => a.id === accountId)
+      if (acc) return acc.exchange
+    }
+    return accounts.find((a) => a.exchange === 'binance')?.exchange
+      ?? accounts[0]?.exchange
+      ?? 'binance'
+  }, [accountId, accounts])
   const initialPrefs = useMemo(() => loadPrefs(), [])
-  const [exchange, setExchange] = useState<ExchangeId>('binance')
   const [tickers, setTickers] = useState<TickerRow[]>([])
   const [favorites, setFavorites] = useState<string[]>([])
   const [selected, setSelected] = useState('BTCUSDT')
@@ -132,7 +142,7 @@ export function LiveScreen() {
     if (!state?.symbol) return
     setSelected(state.symbol.toUpperCase())
     if (state.view) setView(state.view)
-    if (state.exchange) setExchange(state.exchange)
+    // Exchange comes from the topbar account filter (not a separate Markets control).
   }, [location.state, location.key])
 
   useEffect(() => {
@@ -382,33 +392,16 @@ export function LiveScreen() {
             type="button"
             className={`chart-icon-btn ${favorites.includes(selected) ? 'on fav' : ''}`}
             aria-label={favorites.includes(selected) ? 'Remove favorite' : 'Add favorite'}
+            title="Favorite"
             onClick={() => void onToggleFav(selected)}
           >
             <StarGlyph filled={favorites.includes(selected)} />
           </button>
           <button
             type="button"
-            className="chart-icon-btn"
-            aria-label="Fit chart"
-            title="Fit"
-            onClick={() => setFitNonce((n) => n + 1)}
-          >
-            <FitGlyph />
-          </button>
-          <button
-            type="button"
-            className={`chart-icon-btn ${logScale ? 'on' : ''}`}
-            aria-label="Log scale"
-            title="Log scale"
-            onClick={() => setLogScale((v) => !v)}
-          >
-            <LogGlyph />
-          </button>
-          <button
-            type="button"
             className={`chart-icon-btn ${showIndicators ? 'on' : ''}`}
-            aria-label="Indicators"
-            title="Indicators"
+            aria-label="Chart tools"
+            title="Tools"
             aria-pressed={showIndicators}
             onClick={() => setShowIndicators((v) => !v)}
           >
@@ -480,11 +473,33 @@ export function LiveScreen() {
       {showIndicators && (
         <div className="chart-ind-panel">
           <div className="chart-ind-head">
-            <span>Indicators</span>
+            <span>Tools</span>
             <button type="button" className="chart-ind-clear" onClick={() => setIndicators(['vol'])}>
               Reset
             </button>
           </div>
+          <div className="chart-tool-row">
+            <button
+              type="button"
+              className="chart-icon-btn"
+              aria-label="Fit chart to data"
+              title="Fit"
+              onClick={() => setFitNonce((n) => n + 1)}
+            >
+              <FitGlyph />
+            </button>
+            <button
+              type="button"
+              className={`chart-icon-btn ${logScale ? 'on' : ''}`}
+              aria-label="Log scale"
+              title="Log scale"
+              aria-pressed={logScale}
+              onClick={() => setLogScale((v) => !v)}
+            >
+              <LogGlyph />
+            </button>
+          </div>
+          <p className="chart-ind-label">Indicators</p>
           <div className="chart-ind-grid">
             {INDICATOR_OPTS.map((opt) => {
               const on = indicators.includes(opt.id)
@@ -566,15 +581,6 @@ export function LiveScreen() {
           </div>
 
           <div className={`chip-row ${view === 'chart' ? 'chip-row-compact' : ''}`}>
-            <AppSelect
-              icon="exchange"
-              value={exchange}
-              onChange={(v) => setExchange(v as ExchangeId)}
-              options={[
-                { value: 'binance', label: 'Binance', hint: 'Spot markets' },
-                { value: 'okx', label: 'OKX', hint: 'Spot markets' },
-              ]}
-            />
             <input
               className="search-pill"
               placeholder="Search BTC…"
@@ -645,26 +651,35 @@ function StarGlyph({ filled }: { filled?: boolean }) {
 }
 
 function FitGlyph() {
+  // Compress / fit-to-data (arrows inward) — distinct from fullscreen
   return (
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-      <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" strokeLinecap="round" strokeLinejoin="round" />
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+      <rect x="4" y="4" width="16" height="16" rx="2.5" />
+      <path d="M9 12H4.8M15 12h4.2M12 9V4.8M12 15v4.2" strokeLinecap="round" />
+      <path d="M9 12l2.2-2.2M9 12l2.2 2.2M15 12l-2.2-2.2M15 12l-2.2 2.2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }
 
 function LogGlyph() {
+  // Log Y-axis: axis + accelerating curve
   return (
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-      <path d="M4 19c4-10 8-14 16-14" strokeLinecap="round" />
-      <path d="M4 19h16" strokeLinecap="round" />
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+      <path d="M5 4v15h15" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M5 8.5h2.2M5 12h1.4M5 15.5h2.8" strokeLinecap="round" />
+      <path d="M8 17c2.2-1.2 3.6-4.2 5-7.2S16.5 5.5 20 5" strokeLinecap="round" />
     </svg>
   )
 }
 
 function FxGlyph() {
+  // Sliders — reads clearly as “tools / indicators”
   return (
     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-      <path d="M5 8h8M9 5v10M14 16l3-8 3 8M15.2 13h3.6" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M4 7h16M4 12h16M4 17h16" strokeLinecap="round" />
+      <circle cx="9" cy="7" r="2.2" fill="currentColor" stroke="none" />
+      <circle cx="15" cy="12" r="2.2" fill="currentColor" stroke="none" />
+      <circle cx="11" cy="17" r="2.2" fill="currentColor" stroke="none" />
     </svg>
   )
 }
