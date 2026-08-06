@@ -381,7 +381,7 @@ export function AccountsScreen() {
                       </span>
                       <div>
                         <small>Sync</small>
-                        <strong title={hasError ? sync!.lastError : syncTitle}>
+                        <strong title={hasError ? (sync!.lastError ?? undefined) : syncTitle}>
                           {hasError ? 'Error' : syncLabel}
                         </strong>
                       </div>
