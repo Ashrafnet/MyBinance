@@ -8,7 +8,7 @@ export function UnlockScreen() {
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
-  if (!auth.ready) return <div className="unlock muted">Opening vault…</div>
+  if (!auth.ready) return <div className="unlock muted">Preparing your desk…</div>
   if (auth.unlocked) return <Navigate to="/" replace />
 
   async function onSubmit(e: FormEvent) {
@@ -29,26 +29,26 @@ export function UnlockScreen() {
     setBusy(true)
     setError(null)
     const ok = await auth.unlockBiometric()
-    if (!ok) setError('Fingerprint did not match. Use your recovery PIN.')
+    if (!ok) setError('Fingerprint did not match. Try your recovery PIN.')
     setBusy(false)
   }
 
   return (
     <div className="unlock">
-      <div className="panel unlock-card">
-        <p className="eyebrow">On-device Spot desk</p>
+      <div className="unlock-card">
+        <p className="eyebrow">Private Spot portfolio</p>
         <h1 className="brand">
           My<span>Exchanges</span>
         </h1>
         <p className="unlock-lead">
           {auth.initialized
-            ? 'Open your Binance and OKX balances. Keys never leave this device.'
-            : 'Set a recovery PIN, then use fingerprint next time. Nothing is stored in the cloud.'}
+            ? 'A calm place for your Binance and OKX balances — encrypted on this device only.'
+            : 'Create a recovery PIN to protect your keys. Next time, unlock with your fingerprint.'}
         </p>
         <div className="unlock-meta">
           <span className="stamp hot">Binance</span>
           <span className="stamp hot">OKX</span>
-          <span className="stamp">Offline-first</span>
+          <span className="stamp">Works offline</span>
         </div>
         {auth.initialized && auth.biometricAvailable && (
           <button
@@ -71,6 +71,7 @@ export function UnlockScreen() {
               onChange={(e) => setPin(e.target.value)}
               minLength={4}
               required
+              placeholder="••••"
             />
           </label>
           {error && <div className="banner danger">{error}</div>}

@@ -12,8 +12,8 @@ export default defineConfig({
         name: 'MyExchanges',
         short_name: 'MyExchanges',
         description: 'Offline-first Binance + OKX Spot portfolio',
-        theme_color: '#EEF1F4',
-        background_color: '#EEF1F4',
+        theme_color: '#F3F6FA',
+        background_color: '#F3F6FA',
         display: 'standalone',
         start_url: '/',
         icons: [

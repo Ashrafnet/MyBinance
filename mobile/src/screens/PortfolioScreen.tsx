@@ -109,7 +109,8 @@ export function PortfolioScreen() {
           style={{ maxWidth: 240 }}
         />
       </div>
-      <div className="panel" style={{ overflowX: 'auto' }}>
+      <div className="panel balance-shell">
+        <div className="table-wrap">
         <table>
           <thead>
             <tr>
@@ -132,7 +133,12 @@ export function PortfolioScreen() {
             ))}
           </tbody>
         </table>
-        {filtered.length === 0 && <p className="muted">No balances in cache. Add accounts and refresh online.</p>}
+        {filtered.length === 0 && (
+          <p className="muted" style={{ padding: '8px 10px 16px' }}>
+            No balances yet. Add an account, then tap Refresh while online.
+          </p>
+        )}
+        </div>
       </div>
       <Toast message={toast} onClose={() => setToast(null)} />
     </div>

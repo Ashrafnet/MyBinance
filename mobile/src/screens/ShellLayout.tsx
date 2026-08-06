@@ -28,16 +28,10 @@ export function ShellLayout() {
             Lock
           </button>
         </div>
-        <div className="blotter-rail" aria-label="Desk status">
+        <div className="blotter-rail" aria-label="Connection status">
           <span className={`blotter-dot ${online ? '' : 'off'}`} />
           <span>
-            Link <strong>{online ? 'Live' : 'Offline'}</strong>
-          </span>
-          <span>
-            Markets <strong>Binance · OKX</strong>
-          </span>
-          <span>
-            Mode <strong>Spot</strong>
+            {online ? 'Connected' : 'Offline'} · <strong>Binance & OKX Spot</strong>
           </span>
         </div>
       </header>
