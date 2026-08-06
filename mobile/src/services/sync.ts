@@ -85,6 +85,39 @@ export async function syncAccount(accountId: string) {
   }
 }
 
+/** Pull Binance daily snapshots for a chosen date window (merged into cache). */
+export async function syncHistoryRange(
+  accountId: string,
+  range: { startTime: number; endTime: number },
+) {
+  const accounts = await listAccounts()
+  const ids = accountId === 'all' ? accounts.map((a) => a.id) : [accountId]
+  const errors: string[] = []
+
+  for (const id of ids) {
+    if (!id) continue
+    const account = accounts.find((a) => a.id === id)
+    if (!account) continue
+    const creds = await getCredentials(id)
+    if (!creds) {
+      errors.push(`${account.alias}: credentials missing`)
+      continue
+    }
+    const ex = getExchange(account.exchange)
+    if (!ex.fetchHistory) {
+      errors.push(`${account.alias}: history range only on Binance`)
+      continue
+    }
+    try {
+      const points = await ex.fetchHistory(creds, id, range)
+      if (points.length) await cacheUpsertHistory(points)
+    } catch (e) {
+      errors.push(`${account.alias}: ${e instanceof Error ? e.message : 'history failed'}`)
+    }
+  }
+  return errors
+}
+
 export async function syncAll() {
   const errors: string[] = []
   try {

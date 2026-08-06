@@ -178,30 +178,67 @@ export class BinanceSpotAdapter implements IExchange {
     }))
   }
 
-  async fetchHistory(creds: AccountCredentials, accountId: string) {
-    const end = Date.now()
-    const start = end - 30 * 24 * 60 * 60 * 1000
+  async fetchHistory(
+    creds: AccountCredentials,
+    accountId: string,
+    range?: { startTime: number; endTime: number },
+  ) {
+    type SnapshotResponse = {
+      code?: number | string
+      msg?: string
+      snapshotVos?: Array<{
+        updateTime: number
+        data: {
+          totalAssetOfBtc?: string
+          balances?: Array<{ asset: string; free: string; locked: string }>
+        }
+      }>
+    }
+
+    // Binance: period must be < 30 days and within the last month.
+    const end = range?.endTime ?? Date.now()
+    const start = range?.startTime ?? end - 29 * 24 * 60 * 60 * 1000
+
+    const pull = async (params: Record<string, string | number>) => {
+      const data = await signedRequest<SnapshotResponse>(creds, 'GET', '/sapi/v1/accountSnapshot', params)
+      if (data.code != null && Number(data.code) !== 200) {
+        throw new ExchangeError(data.msg || `Snapshot code ${data.code}`, Number(data.code) || 400)
+      }
+      return data.snapshotVos ?? []
+    }
+
     try {
-      const data = await signedRequest<{
-        code?: number | string
-        snapshotVos?: Array<{
-          updateTime: number
-          data: {
-            totalAssetOfBtc?: string
-            balances?: Array<{ asset: string; free: string; locked: string }>
-          }
-        }>
-      }>(creds, 'GET', '/sapi/v1/accountSnapshot', {
-        type: 'SPOT',
-        startTime: start,
-        endTime: end,
-        limit: 30,
-      })
-      // Binance sometimes returns HTTP 200 with code != 200 in the body (number or string).
-      if (data.code != null && Number(data.code) !== 200) return []
+      let snapshots: NonNullable<SnapshotResponse['snapshotVos']> = []
+      try {
+        snapshots = await pull({ type: 'SPOT', startTime: start, endTime: end, limit: 30 })
+      } catch {
+        // Fallback when the ranged query fails (weight / window quirks).
+        snapshots = await pull({ type: 'SPOT', limit: 30 })
+      }
+      if (!snapshots.length) return []
 
       const tickers = await this.fetchTickers()
-      return (data.snapshotVos ?? []).map((s) => {
+      const byDate = new Map<
+        string,
+        {
+          id: string
+          accountId: string
+          date: string
+          usdtValue: number
+          btcValue: number
+          capturedAt: number
+          assets: Array<{
+            asset: string
+            free: number
+            locked: number
+            total: number
+            usdtValue: number
+            btcValue: number
+          }>
+        }
+      >()
+
+      for (const s of snapshots) {
         const date = new Date(s.updateTime).toISOString().slice(0, 10)
         const raw = (s.data?.balances ?? [])
           .map((b) => {
@@ -212,8 +249,6 @@ export class BinanceSpotAdapter implements IExchange {
           })
           .filter((b) => b.total > 0 && Number.isFinite(b.total))
 
-        // Match desktop app: value snapshot balances with market prices.
-        // Fall back to totalAssetOfBtc only when balances are missing.
         const valued = valueBalances(raw, tickers).sort((a, b) => b.usdtValue - a.usdtValue)
         let usdtValue = sumUsdt(valued)
         let btcValue = valued.reduce((sum, b) => sum + b.btcValue, 0)
@@ -223,14 +258,16 @@ export class BinanceSpotAdapter implements IExchange {
           btcValue = Number(s.data.totalAssetOfBtc)
         }
 
-        return {
+        const prev = byDate.get(date)
+        if (prev && (prev.capturedAt ?? 0) > s.updateTime) continue
+
+        byDate.set(date, {
           id: `${accountId}:${date}`,
           accountId,
           date,
           usdtValue,
           btcValue,
           capturedAt: s.updateTime,
-          // Keep dust/unpriced coins too — count must match what the snap contained.
           assets: valued.map((b) => ({
             asset: b.asset,
             free: b.free,
@@ -239,8 +276,10 @@ export class BinanceSpotAdapter implements IExchange {
             usdtValue: b.usdtValue,
             btcValue: b.btcValue,
           })),
-        }
-      })
+        })
+      }
+
+      return [...byDate.values()].sort((a, b) => b.date.localeCompare(a.date))
     } catch {
       return []
     }

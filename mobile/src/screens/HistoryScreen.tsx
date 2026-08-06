@@ -1,11 +1,61 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { AccountMeta, HistoryAsset, HistoryPoint } from '../domain/types'
 import { cacheGetHistory, listAccounts } from '../storage/cache'
-import { syncAccount, syncAll } from '../services/sync'
+import { syncAccount, syncAll, syncHistoryRange } from '../services/sync'
 import { useOnline } from '../app/OnlineContext'
 import { AppSelect } from '../components/AppSelect'
 import { AssetIcon } from '../components/AssetIcon'
+import { Toast } from '../components/Toast'
 import { formatAbsoluteDate, formatAbsoluteTime, formatHumanDate, formatHumanTime } from '../utils/time'
+
+const DAY_MS = 24 * 60 * 60 * 1000
+/** Binance allows under 30 days and only within the last month. */
+const MAX_SPAN_DAYS = 29
+
+function ymdLocal(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+function parseYmdStart(ymd: string): number {
+  const [y, m, d] = ymd.split('-').map(Number)
+  return new Date(y, m - 1, d, 0, 0, 0, 0).getTime()
+}
+
+function parseYmdEnd(ymd: string): number {
+  const [y, m, d] = ymd.split('-').map(Number)
+  return new Date(y, m - 1, d, 23, 59, 59, 999).getTime()
+}
+
+function oldestAllowedYmd(): string {
+  return ymdLocal(new Date(Date.now() - MAX_SPAN_DAYS * DAY_MS))
+}
+
+function clampHistoryDates(from: string, to: string): { from: string; to: string; note: string | null } {
+  const today = ymdLocal(new Date())
+  const oldest = oldestAllowedYmd()
+  let f = from
+  let t = to
+  let note: string | null = null
+
+  if (t > today) t = today
+  if (f > t) f = t
+  if (f < oldest) {
+    f = oldest
+    note = 'Binance only keeps about the last 30 days of Spot snapshots.'
+  }
+
+  const span = Math.round((parseYmdEnd(t) - parseYmdStart(f)) / DAY_MS)
+  if (span > MAX_SPAN_DAYS) {
+    f = ymdLocal(new Date(parseYmdEnd(t) - MAX_SPAN_DAYS * DAY_MS))
+    if (f < oldest) f = oldest
+    note = 'Range capped at 29 days (Binance limit).'
+  }
+
+  return { from: f, to: t, note }
+}
 
 type DayCard = {
   id: string
@@ -138,7 +188,14 @@ export function HistoryScreen() {
   const [points, setPoints] = useState<Array<HistoryPoint & { id: string }>>([])
   const [busy, setBusy] = useState(false)
   const [expanded, setExpanded] = useState<string | null>(null)
+  const [fromDate, setFromDate] = useState(() => oldestAllowedYmd())
+  const [toDate, setToDate] = useState(() => ymdLocal(new Date()))
+  const [rangeNote, setRangeNote] = useState<string | null>(null)
+  const [toast, setToast] = useState<string | null>(null)
   const backfillTried = useRef(false)
+
+  const todayYmd = ymdLocal(new Date())
+  const minYmd = oldestAllowedYmd()
 
   useEffect(() => {
     setExpanded(null)
@@ -176,21 +233,58 @@ export function HistoryScreen() {
     })()
   }, [accountId, online])
 
+  function applyPreset(days: number) {
+    const to = ymdLocal(new Date())
+    const from = ymdLocal(new Date(Date.now() - (days - 1) * DAY_MS))
+    const clamped = clampHistoryDates(from, to)
+    setFromDate(clamped.from)
+    setToDate(clamped.to)
+    setRangeNote(clamped.note)
+  }
+
+  function onFromChange(value: string) {
+    const clamped = clampHistoryDates(value, toDate)
+    setFromDate(clamped.from)
+    setToDate(clamped.to)
+    setRangeNote(clamped.note)
+  }
+
+  function onToChange(value: string) {
+    const clamped = clampHistoryDates(fromDate, value)
+    setFromDate(clamped.from)
+    setToDate(clamped.to)
+    setRangeNote(clamped.note)
+  }
+
   async function refresh() {
     if (!online) return
+    const clamped = clampHistoryDates(fromDate, toDate)
+    setFromDate(clamped.from)
+    setToDate(clamped.to)
+    setRangeNote(clamped.note)
     setBusy(true)
+    setToast(null)
     try {
-      if (accountId === 'all') await syncAll()
-      else await syncAccount(accountId)
+      const range = {
+        startTime: parseYmdStart(clamped.from),
+        endTime: parseYmdEnd(clamped.to),
+      }
+      const errors = await syncHistoryRange(accountId, range)
       const accs = await listAccounts()
       setAccounts(accs)
       await loadPoints(accs, accountId)
+      if (errors.length) setToast(errors.join(' · '))
+    } catch (e) {
+      setToast(e instanceof Error ? e.message : 'Could not load history')
     } finally {
       setBusy(false)
     }
   }
 
-  const cards = useMemo(() => buildDayCards(points, accounts, accountId), [points, accounts, accountId])
+  const cards = useMemo(() => {
+    const all = buildDayCards(points, accounts, accountId)
+    return all.filter((c) => c.date >= fromDate && c.date <= toDate)
+  }, [points, accounts, accountId, fromDate, toDate])
 
   return (
     <div className="mobile-page">
@@ -205,7 +299,7 @@ export function HistoryScreen() {
           disabled={!online || busy}
           onClick={() => void refresh()}
         >
-          {busy ? '…' : 'Refresh'}
+          {busy ? '…' : 'Load'}
         </button>
       </div>
 
@@ -223,6 +317,48 @@ export function HistoryScreen() {
           })),
         ]}
       />
+
+      <div className="history-range panel">
+        <div className="history-range-presets">
+          <button type="button" className="interval-chip" onClick={() => applyPreset(7)}>
+            7d
+          </button>
+          <button type="button" className="interval-chip" onClick={() => applyPreset(14)}>
+            14d
+          </button>
+          <button type="button" className="interval-chip" onClick={() => applyPreset(30)}>
+            30d
+          </button>
+        </div>
+        <div className="history-range-fields">
+          <label>
+            <span>From</span>
+            <input
+              type="date"
+              value={fromDate}
+              min={minYmd}
+              max={toDate}
+              onChange={(e) => onFromChange(e.target.value)}
+            />
+          </label>
+          <label>
+            <span>To</span>
+            <input
+              type="date"
+              value={toDate}
+              min={fromDate}
+              max={todayYmd}
+              onChange={(e) => onToChange(e.target.value)}
+            />
+          </label>
+        </div>
+        <p className="muted tight history-hint">
+          {rangeNote ??
+            (cards.length
+              ? `${cards.length} day${cards.length === 1 ? '' : 's'} in range · Binance Spot max ~30 days`
+              : 'Pick From / To, then Load while online')}
+        </p>
+      </div>
 
       <div className="asset-list">
         {cards.map((card, idx) => {
@@ -413,9 +549,13 @@ export function HistoryScreen() {
           )
         })}
         {cards.length === 0 && (
-          <div className="empty-card">No history cached yet. Tap Refresh to sync daily snapshots.</div>
+          <div className="empty-card">
+            No snapshots in this date range. Tap Load while online to pull Binance daily history.
+          </div>
         )}
       </div>
+
+      <Toast message={toast} onClose={() => setToast(null)} />
     </div>
   )
 }

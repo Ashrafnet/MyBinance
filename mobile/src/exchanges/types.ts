@@ -30,7 +30,11 @@ export interface IExchange {
   cancelOrder(creds: AccountCredentials, req: CancelOrderRequest): Promise<void>
   fetchTickers(): Promise<TickerRow[]>
   fetchCandles(symbol: string, interval: string, limit?: number): Promise<Candle[]>
-  fetchHistory?(creds: AccountCredentials, accountId: string): Promise<Array<HistoryPoint & { id: string }>>
+  fetchHistory?(
+    creds: AccountCredentials,
+    accountId: string,
+    range?: { startTime: number; endTime: number },
+  ): Promise<Array<HistoryPoint & { id: string }>>
   subscribeTickers(onUpdate: (t: TickerRow) => void): () => void
   subscribeCandles(symbol: string, interval: string, onUpdate: (c: Candle) => void): () => void
 }

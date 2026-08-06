@@ -395,7 +395,15 @@ export function PortfolioScreen() {
             const up = (change ?? 0) >= 0
             return (
               <div key={item.symbol} className="asset-row ticker-row fav">
-                <div className="ticker-main">
+                <button
+                  type="button"
+                  className="ticker-main"
+                  onClick={() =>
+                    navigate('/live', {
+                      state: { symbol: item.symbol, view: 'chart' },
+                    })
+                  }
+                >
                   <AssetIcon asset={item.asset} />
                   <div className="asset-main">
                     <div className="asset-title">
@@ -405,7 +413,7 @@ export function PortfolioScreen() {
                     <span>
                       {held
                         ? `${item.balance!.total} · free ${item.balance!.free}`
-                        : `${item.symbol} · not held`}
+                        : `${item.symbol} · tap for chart`}
                     </span>
                   </div>
                   <div className="asset-values">
@@ -425,12 +433,15 @@ export function PortfolioScreen() {
                       </>
                     )}
                   </div>
-                </div>
+                </button>
                 <button
                   type="button"
                   className="fav-btn on"
                   aria-label="Remove favorite"
-                  onClick={() => void onToggleFavSymbol(item.symbol)}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    void onToggleFavSymbol(item.symbol)
+                  }}
                 >
                   ★
                 </button>
