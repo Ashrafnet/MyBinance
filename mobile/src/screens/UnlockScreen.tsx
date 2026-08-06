@@ -8,7 +8,7 @@ export function UnlockScreen() {
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
-  if (!auth.ready) return <div className="unlock muted">Loading…</div>
+  if (!auth.ready) return <div className="unlock muted">Opening vault…</div>
   if (auth.unlocked) return <Navigate to="/" replace />
 
   async function onSubmit(e: FormEvent) {
@@ -19,7 +19,7 @@ export function UnlockScreen() {
       if (!auth.initialized) await auth.setupPin(pin)
       else await auth.unlockPin(pin)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unlock failed')
+      setError(err instanceof Error ? err.message : 'Could not unlock')
     } finally {
       setBusy(false)
     }
@@ -29,23 +29,34 @@ export function UnlockScreen() {
     setBusy(true)
     setError(null)
     const ok = await auth.unlockBiometric()
-    if (!ok) setError('Fingerprint failed — use recovery PIN')
+    if (!ok) setError('Fingerprint did not match. Use your recovery PIN.')
     setBusy(false)
   }
 
   return (
     <div className="unlock">
       <div className="panel unlock-card">
+        <p className="eyebrow">On-device Spot desk</p>
         <h1 className="brand">
           My<span>Exchanges</span>
         </h1>
-        <p className="muted">
+        <p className="unlock-lead">
           {auth.initialized
-            ? 'Unlock with fingerprint or recovery PIN. Data stays on this device.'
-            : 'Create a recovery PIN (used if biometrics are unavailable), then unlock with fingerprint next time.'}
+            ? 'Open your Binance and OKX balances. Keys never leave this device.'
+            : 'Set a recovery PIN, then use fingerprint next time. Nothing is stored in the cloud.'}
         </p>
+        <div className="unlock-meta">
+          <span className="stamp hot">Binance</span>
+          <span className="stamp hot">OKX</span>
+          <span className="stamp">Offline-first</span>
+        </div>
         {auth.initialized && auth.biometricAvailable && (
-          <button className="btn primary" style={{ width: '100%', marginBottom: 12 }} disabled={busy} onClick={() => void onBio()}>
+          <button
+            className="btn primary"
+            style={{ width: '100%', marginBottom: 12 }}
+            disabled={busy}
+            onClick={() => void onBio()}
+          >
             Unlock with fingerprint
           </button>
         )}

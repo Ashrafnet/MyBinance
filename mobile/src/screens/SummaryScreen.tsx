@@ -21,12 +21,13 @@ export function SummaryScreen() {
 
   return (
     <div>
+      <p className="eyebrow">Desk summary</p>
       <h2>Summary</h2>
       <div className="panel">
-        <p className="muted">Quick totals (from last sync)</p>
-        <h1 style={{ fontSize: '2.2rem', margin: '8px 0' }}>${usdt.toFixed(2)}</h1>
-        <h3 style={{ color: 'var(--accent2)' }}>{btc.toFixed(6)} BTC</h3>
-        {btcPrice > 0 && <p className="muted">BTC ≈ ${btcPrice.toFixed(2)}</p>}
+        <p className="eyebrow">Total Spot value</p>
+        <div className="hero-total">${usdt.toFixed(2)}</div>
+        <div className="hero-sub">{btc.toFixed(6)} BTC</div>
+        {btcPrice > 0 && <p className="muted" style={{ marginTop: 10 }}>BTC mark ${btcPrice.toFixed(2)}</p>}
       </div>
     </div>
   )

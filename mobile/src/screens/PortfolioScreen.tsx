@@ -79,14 +79,18 @@ export function PortfolioScreen() {
 
   return (
     <div>
-      <div className="row" style={{ justifyContent: 'space-between' }}>
-        <h2>Portfolio</h2>
+      <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          <p className="eyebrow">Balances</p>
+          <h2>Portfolio</h2>
+        </div>
         <button className="btn primary" disabled={!online || busy} onClick={() => void refresh()}>
           {busy ? 'Syncing…' : 'Refresh'}
         </button>
       </div>
-      <p className="muted">
-        Total ${sumUsdt(filtered).toFixed(2)} · {sumBtc(filtered).toFixed(6)} BTC · Last sync {lastSync}
+      <div className="hero-total">${sumUsdt(filtered).toFixed(2)}</div>
+      <p className="hero-sub" style={{ marginBottom: 14 }}>
+        {sumBtc(filtered).toFixed(6)} BTC · synced {lastSync}
       </p>
       <div className="row" style={{ marginBottom: 12 }}>
         <select value={accountId} onChange={(e) => setAccountId(e.target.value)} style={{ maxWidth: 220 }}>

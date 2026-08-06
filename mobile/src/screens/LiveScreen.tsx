@@ -117,8 +117,11 @@ export function LiveScreen() {
 
   return (
     <div>
-      <div className="row" style={{ justifyContent: 'space-between' }}>
-        <h2>Live prices</h2>
+      <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          <p className="eyebrow">Markets</p>
+          <h2>Live prices</h2>
+        </div>
         <div className="tabs">
           <button className={`btn ${view === 'cards' ? 'active' : ''}`} onClick={() => setView('cards')}>
             Cards

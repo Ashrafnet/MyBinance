@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import { OfflineBanner } from '../components/OfflineBanner'
 import { useAuth } from '../app/AuthContext'
+import { useOnline } from '../app/OnlineContext'
 
 const links = [
   ['/', 'Portfolio'],
@@ -14,15 +15,31 @@ const links = [
 
 export function ShellLayout() {
   const auth = useAuth()
+  const online = useOnline()
+
   return (
     <div className="app-shell">
       <header className="topbar">
-        <div className="brand">
-          My<span>Exchanges</span>
+        <div className="topbar-main">
+          <div className="brand">
+            My<span>Exchanges</span>
+          </div>
+          <button className="btn" onClick={() => auth.lock()}>
+            Lock
+          </button>
         </div>
-        <button className="btn" onClick={() => auth.lock()}>
-          Lock
-        </button>
+        <div className="blotter-rail" aria-label="Desk status">
+          <span className={`blotter-dot ${online ? '' : 'off'}`} />
+          <span>
+            Link <strong>{online ? 'Live' : 'Offline'}</strong>
+          </span>
+          <span>
+            Markets <strong>Binance · OKX</strong>
+          </span>
+          <span>
+            Mode <strong>Spot</strong>
+          </span>
+        </div>
       </header>
       <main className="content">
         <OfflineBanner />
