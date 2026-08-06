@@ -186,7 +186,17 @@ export class OkxSpotAdapter implements IExchange {
 
   async fetchCandles(symbol: string, interval: string, limit = 200): Promise<Candle[]> {
     const bar =
-      interval === '1m' ? '1m' : interval === '5m' ? '5m' : interval === '1h' ? '1H' : interval === '1d' ? '1D' : interval
+      interval === '1m'
+        ? '1m'
+        : interval === '5m'
+          ? '5m'
+          : interval === '1h'
+            ? '1H'
+            : interval === '4h'
+              ? '4H'
+              : interval === '1d'
+                ? '1D'
+                : interval
     const instId = fromAppSymbol(symbol)
     const data = await httpRequest<OkxResp<string[][]>>({
       url: `${rest()}/api/v5/market/candles?instId=${encodeURIComponent(instId)}&bar=${bar}&limit=${limit}`,
@@ -236,7 +246,17 @@ export class OkxSpotAdapter implements IExchange {
 
   subscribeCandles(symbol: string, interval: string, onUpdate: (c: Candle) => void): () => void {
     const bar =
-      interval === '1m' ? '1m' : interval === '5m' ? '5m' : interval === '1h' ? '1H' : interval === '1d' ? '1D' : interval
+      interval === '1m'
+        ? '1m'
+        : interval === '5m'
+          ? '5m'
+          : interval === '1h'
+            ? '1H'
+            : interval === '4h'
+              ? '4H'
+              : interval === '1d'
+                ? '1D'
+                : interval
     const instId = fromAppSymbol(symbol)
     const sock = new WebSocket(ws())
     sock.onopen = () => {

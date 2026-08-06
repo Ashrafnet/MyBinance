@@ -7,7 +7,7 @@ import { startLiveCandles, startLiveTickers } from '../services/pricesLive'
 import { useOnline } from '../app/OnlineContext'
 import { CandleChart } from '../components/CandleChart'
 
-const INTERVALS = ['1m', '5m', '1h', '1d'] as const
+const INTERVALS = ['1m', '5m', '1h', '4h', '1d'] as const
 
 export function LiveScreen() {
   const online = useOnline()
