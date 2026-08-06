@@ -16,6 +16,7 @@ import { Toast } from '../components/Toast'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { sumUsdt } from '../services/valuation'
 import { Capacitor } from '@capacitor/core'
+import { formatAbsoluteTime, formatHumanTime } from '../utils/time'
 
 type AccountView = {
   meta: AccountMeta
@@ -165,8 +166,9 @@ export function AccountsScreen() {
           const { meta, usdt, assetCount, spark, sync } = card
           const sparkUp = spark.length >= 2 ? spark[spark.length - 1]! >= spark[0]! : true
           const syncLabel = sync?.lastSyncAt
-            ? new Date(sync.lastSyncAt).toLocaleString()
+            ? formatHumanTime(sync.lastSyncAt)
             : 'Never synced'
+          const syncTitle = sync?.lastSyncAt ? formatAbsoluteTime(sync.lastSyncAt) : undefined
           const hasError = Boolean(sync?.lastError)
           return (
             <div key={meta.id} className={`account-card ${meta.exchange} ${hasError ? 'has-error' : ''}`}>
@@ -190,7 +192,7 @@ export function AccountsScreen() {
                   <span>
                     {assetCount} asset{assetCount === 1 ? '' : 's'} · Spot
                   </span>
-                  <span className={`account-sync ${hasError ? 'err' : ''}`}>
+                  <span className={`account-sync ${hasError ? 'err' : ''}`} title={hasError ? undefined : syncTitle}>
                     {hasError ? sync!.lastError : `Synced ${syncLabel}`}
                   </span>
                 </div>

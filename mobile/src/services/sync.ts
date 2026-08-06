@@ -54,12 +54,26 @@ export async function syncAccount(accountId: string) {
 
     // Always record today's live Spot value so History matches Home (Binance + OKX).
     const today = new Date().toISOString().slice(0, 10)
+    const held = valued
+      .filter((b) => b.total > 0)
+      .slice()
+      .sort((a, b) => b.usdtValue - a.usdtValue)
     await cacheUpsertHistory([
       {
         id: `${accountId}:${today}`,
         accountId,
         date: today,
-        usdtValue: sumUsdt(valued),
+        usdtValue: sumUsdt(held),
+        btcValue: held.reduce((s, b) => s + b.btcValue, 0),
+        capturedAt: Date.now(),
+        assets: held.map((b) => ({
+          asset: b.asset,
+          free: b.free,
+          locked: b.locked,
+          total: b.total,
+          usdtValue: b.usdtValue,
+          btcValue: b.btcValue,
+        })),
       },
     ])
 

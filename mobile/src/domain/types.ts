@@ -88,8 +88,22 @@ export const DEFAULT_SETTINGS: AppSettings = {
   dustUsdt: 3,
 }
 
+export interface HistoryAsset {
+  asset: string
+  free: number
+  locked: number
+  total: number
+  usdtValue: number
+  btcValue: number
+}
+
 export interface HistoryPoint {
   accountId: string
   date: string
   usdtValue: number
+  /** Spot BTC value when known. */
+  btcValue?: number
+  /** Holdings captured in this daily snapshot (Binance accountSnapshot / live sync). */
+  assets?: HistoryAsset[]
+  capturedAt?: number
 }

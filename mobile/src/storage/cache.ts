@@ -148,7 +148,19 @@ export async function saveSettings(settings: AppSettings) {
 export async function cacheUpsertHistory(points: Array<HistoryPoint & { id: string }>) {
   const db = await getDb()
   const tx = db.transaction('history', 'readwrite')
-  await Promise.all(points.map((p) => tx.store.put(p)))
+  await Promise.all(
+    points.map(async (p) => {
+      const prev = await tx.store.get(p.id)
+      const assets = p.assets?.length ? p.assets : prev?.assets
+      await tx.store.put({
+        ...prev,
+        ...p,
+        assets,
+        btcValue: p.btcValue ?? prev?.btcValue,
+        capturedAt: p.capturedAt ?? prev?.capturedAt,
+      })
+    }),
+  )
   await tx.done
 }
 

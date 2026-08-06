@@ -16,6 +16,7 @@ import { ConfirmDialog } from '../components/ConfirmDialog'
 import { AssetIcon } from '../components/AssetIcon'
 import { AppSelect } from '../components/AppSelect'
 import { syncAccount } from '../services/sync'
+import { formatAbsoluteTime, formatHumanTime } from '../utils/time'
 
 export function OrdersScreen() {
   const online = useOnline()
@@ -85,6 +86,9 @@ export function OrdersScreen() {
   }, [symbol, tickers])
 
   const showSymbolMenu = symbolFocus && symbol.trim().length > 0 && symbolSuggestions.length > 0
+  const matchedSymbol = showSymbolMenu
+    ? (symbolSuggestions[symbolHi]?.symbol ?? symbolSuggestions[0]?.symbol ?? null)
+    : (tickers.find((t) => t.symbol === symbol.trim().toUpperCase())?.symbol ?? null)
 
   useEffect(() => {
     setSymbolHi(0)
@@ -253,30 +257,33 @@ export function OrdersScreen() {
         <form className="panel" onSubmit={(e) => void place(e)}>
           <div className="symbol-field">
             <label htmlFor="order-symbol">Symbol</label>
-            <input
-              id="order-symbol"
-              value={symbol}
-              autoComplete="off"
-              autoCapitalize="characters"
-              spellCheck={false}
-              placeholder="Search BTC, ETH…"
-              role="combobox"
-              aria-autocomplete="list"
-              aria-expanded={showSymbolMenu}
-              aria-controls="symbol-suggest-list"
-              aria-activedescendant={
-                showSymbolMenu && symbolSuggestions[symbolHi]
-                  ? `symbol-opt-${symbolSuggestions[symbolHi]!.symbol}`
-                  : undefined
-              }
-              onFocus={() => setSymbolFocus(true)}
-              onBlur={() => window.setTimeout(() => setSymbolFocus(false), 150)}
-              onChange={(e) => {
-                setSymbolFocus(true)
-                setSymbol(e.target.value.toUpperCase())
-              }}
-              onKeyDown={onSymbolKeyDown}
-            />
+            <div className={`symbol-input-wrap ${matchedSymbol ? 'has-icon' : ''}`}>
+              {matchedSymbol && <AssetIcon asset={matchedSymbol} />}
+              <input
+                id="order-symbol"
+                value={symbol}
+                autoComplete="off"
+                autoCapitalize="characters"
+                spellCheck={false}
+                placeholder="Search BTC, ETH…"
+                role="combobox"
+                aria-autocomplete="list"
+                aria-expanded={showSymbolMenu}
+                aria-controls="symbol-suggest-list"
+                aria-activedescendant={
+                  showSymbolMenu && symbolSuggestions[symbolHi]
+                    ? `symbol-opt-${symbolSuggestions[symbolHi]!.symbol}`
+                    : undefined
+                }
+                onFocus={() => setSymbolFocus(true)}
+                onBlur={() => window.setTimeout(() => setSymbolFocus(false), 150)}
+                onChange={(e) => {
+                  setSymbolFocus(true)
+                  setSymbol(e.target.value.toUpperCase())
+                }}
+                onKeyDown={onSymbolKeyDown}
+              />
+            </div>
             {showSymbolMenu && (
               <ul id="symbol-suggest-list" className="symbol-suggest" role="listbox">
                 {symbolSuggestions.map((t, idx) => (
@@ -460,11 +467,11 @@ export function OrdersScreen() {
                       </div>
                       <div>
                         <em>Created</em>
-                        <strong>{formatWhen(o.createdAt)}</strong>
+                        <strong title={formatAbsoluteTime(o.createdAt)}>{formatHumanTime(o.createdAt)}</strong>
                       </div>
                       <div>
                         <em>Last update</em>
-                        <strong>{formatWhen(o.updatedAt)}</strong>
+                        <strong title={formatAbsoluteTime(o.updatedAt)}>{formatHumanTime(o.updatedAt)}</strong>
                       </div>
                     </div>
 
@@ -547,11 +554,6 @@ function formatQty(n: number) {
   if (Math.abs(n) >= 1000) return n.toLocaleString(undefined, { maximumFractionDigits: 2 })
   if (Math.abs(n) >= 1) return n.toLocaleString(undefined, { maximumFractionDigits: 4 })
   return n.toPrecision(4).replace(/0+$/, '').replace(/\.$/, '')
-}
-
-function formatWhen(ts: number) {
-  if (!ts) return '—'
-  return new Date(ts).toLocaleString()
 }
 
 function shortOrderId(id: string) {

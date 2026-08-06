@@ -183,7 +183,7 @@ export class BinanceSpotAdapter implements IExchange {
     const start = end - 30 * 24 * 60 * 60 * 1000
     try {
       const data = await signedRequest<{
-        code?: number
+        code?: number | string
         snapshotVos?: Array<{
           updateTime: number
           data: {
@@ -197,27 +197,30 @@ export class BinanceSpotAdapter implements IExchange {
         endTime: end,
         limit: 30,
       })
-      // Binance sometimes returns HTTP 200 with code != 200 in the body.
-      if (data.code != null && data.code !== 200) return []
+      // Binance sometimes returns HTTP 200 with code != 200 in the body (number or string).
+      if (data.code != null && Number(data.code) !== 200) return []
 
       const tickers = await this.fetchTickers()
       return (data.snapshotVos ?? []).map((s) => {
         const date = new Date(s.updateTime).toISOString().slice(0, 10)
-        const raw = (s.data.balances ?? [])
+        const raw = (s.data?.balances ?? [])
           .map((b) => {
             const free = Number(b.free)
             const locked = Number(b.locked)
             const total = free + locked
             return { asset: b.asset, free, locked, total, usdtValue: 0, btcValue: 0 }
           })
-          .filter((b) => b.total > 0)
+          .filter((b) => b.total > 0 && Number.isFinite(b.total))
 
         // Match desktop app: value snapshot balances with market prices.
         // Fall back to totalAssetOfBtc only when balances are missing.
-        let usdtValue = sumUsdt(valueBalances(raw, tickers))
-        if (usdtValue <= 0 && s.data.totalAssetOfBtc) {
+        const valued = valueBalances(raw, tickers).sort((a, b) => b.usdtValue - a.usdtValue)
+        let usdtValue = sumUsdt(valued)
+        let btcValue = valued.reduce((sum, b) => sum + b.btcValue, 0)
+        if (usdtValue <= 0 && s.data?.totalAssetOfBtc) {
           const btcUsdt = tickers.find((t) => t.symbol === 'BTCUSDT')?.last ?? 0
           usdtValue = Number(s.data.totalAssetOfBtc) * btcUsdt
+          btcValue = Number(s.data.totalAssetOfBtc)
         }
 
         return {
@@ -225,6 +228,17 @@ export class BinanceSpotAdapter implements IExchange {
           accountId,
           date,
           usdtValue,
+          btcValue,
+          capturedAt: s.updateTime,
+          // Keep dust/unpriced coins too — count must match what the snap contained.
+          assets: valued.map((b) => ({
+            asset: b.asset,
+            free: b.free,
+            locked: b.locked,
+            total: b.total,
+            usdtValue: b.usdtValue,
+            btcValue: b.btcValue,
+          })),
         }
       })
     } catch {

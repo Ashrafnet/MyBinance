@@ -9,6 +9,7 @@ import { useOnline } from '../app/OnlineContext'
 import { Toast } from '../components/Toast'
 import { AppSelect } from '../components/AppSelect'
 import { AssetIcon, baseAsset } from '../components/AssetIcon'
+import { formatAbsoluteTime, formatHumanTime } from '../utils/time'
 
 type PortfolioTab = 'favorites' | 'assets'
 type AssetSort = 'value-desc' | 'value-asc' | 'name-asc' | 'name-desc' | 'amount-desc' | 'amount-asc'
@@ -59,6 +60,7 @@ export function PortfolioScreen() {
   const [sort, setSort] = useState<AssetSort>('value-desc')
   const [expandedAsset, setExpandedAsset] = useState<string | null>(null)
   const [lastSync, setLastSync] = useState<string>('Never')
+  const [lastSyncAt, setLastSyncAt] = useState<number | null>(null)
   const [syncError, setSyncError] = useState<string | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -117,7 +119,8 @@ export function PortfolioScreen() {
       }
     }
     setRows([...map.values()].sort((a, b) => b.usdtValue - a.usdtValue))
-    setLastSync(latest ? new Date(latest).toLocaleString() : 'Never')
+    setLastSyncAt(latest || null)
+    setLastSync(latest ? formatHumanTime(latest) : 'Never')
     setSyncError(errors.length ? errors.join(' · ') : null)
   }, [accountId])
 
@@ -315,7 +318,9 @@ export function PortfolioScreen() {
             {busy ? '…' : '↻'}
           </button>
         </div>
-        <p className="hero-meta">Synced {lastSync}</p>
+        <p className="hero-meta" title={lastSyncAt ? formatAbsoluteTime(lastSyncAt) : undefined}>
+          Synced {lastSync}
+        </p>
       </section>
 
       {syncError && <div className="banner danger">{syncError}</div>}
