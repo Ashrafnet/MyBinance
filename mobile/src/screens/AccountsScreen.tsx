@@ -15,16 +15,27 @@ import { useAccountFilter } from '../app/AccountFilterContext'
 import { useOnline } from '../app/OnlineContext'
 import { Toast } from '../components/Toast'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import { AssetIcon } from '../components/AssetIcon'
 import { sumUsdt } from '../services/valuation'
 import { Capacitor } from '@capacitor/core'
 import { formatMoney } from '../services/valuation'
 import { formatAbsoluteTime, formatHumanTime } from '../utils/time'
+
+type HoldingPreview = {
+  asset: string
+  usdtValue: number
+  weight: number
+}
 
 type AccountView = {
   meta: AccountMeta
   usdt: number
   assetCount: number
   spark: number[]
+  changePct: number | null
+  rangeHigh: number
+  rangeLow: number
+  holdings: HoldingPreview[]
   sync: SyncMeta | undefined
 }
 
@@ -56,21 +67,37 @@ export function AccountsScreen() {
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [pendingDelete, setPendingDelete] = useState<AccountView | null>(null)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
 
   async function reload() {
     const accounts = await listAccounts()
     const next: AccountView[] = []
     for (const meta of accounts) {
       const balances = await cacheGetBalances(meta.id)
-      const held = balances.filter((b) => b.total > 0)
+      const held = balances.filter((b) => b.total > 0).sort((a, b) => b.usdtValue - a.usdtValue)
       const history = (await cacheGetHistory(meta.id))
         .slice()
         .sort((a, b) => a.date.localeCompare(b.date))
+      const usdt = sumUsdt(held)
+      const histSpark = history.slice(-14).map((h) => h.usdtValue).filter((n) => Number.isFinite(n))
+      const spark = buildSparkSeries(histSpark, usdt)
+      const first = spark[0]
+      const last = spark[spark.length - 1]
+      const changePct =
+        first != null && last != null && first > 0 ? ((last - first) / first) * 100 : null
       next.push({
         meta,
-        usdt: sumUsdt(held),
+        usdt,
         assetCount: held.length,
-        spark: history.slice(-14).map((h) => h.usdtValue),
+        spark,
+        changePct,
+        rangeHigh: spark.length ? Math.max(...spark) : usdt,
+        rangeLow: spark.length ? Math.min(...spark) : usdt,
+        holdings: held.slice(0, 4).map((b) => ({
+          asset: b.asset,
+          usdtValue: b.usdtValue,
+          weight: usdt > 0 ? (b.usdtValue / usdt) * 100 : 0,
+        })),
         sync: await cacheGetSyncMeta(meta.id),
       })
     }
@@ -225,37 +252,45 @@ export function AccountsScreen() {
         </div>
         <button
           type="button"
-          className="btn primary btn-compact"
+          className={`icon-btn page-head-action ${showForm ? 'muted-action' : 'primary-glow'}`}
+          aria-label={showForm ? 'Close' : 'Add account'}
           onClick={() => (showForm ? resetForm() : startAdd())}
         >
-          {showForm ? 'Close' : '+ Add'}
+          {showForm ? (
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden="true">
+              <path d="M7 7l10 10M17 7L7 17" strokeLinecap="round" />
+            </svg>
+          ) : (
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.6" aria-hidden="true">
+              <path d="M12 6v12M6 12h12" strokeLinecap="round" />
+            </svg>
+          )}
         </button>
       </div>
       <p className="muted tight">
-        API keys stay encrypted on this device. Tap an account for portfolio, or Edit to change alias / keys.
+        API keys stay encrypted on this device. Tap a card to expand details, or open the portfolio from there.
       </p>
 
-      <div className="asset-list">
+      <div className="asset-list account-card-list">
         {cards.map((card) => {
-          const { meta, usdt, assetCount, spark, sync } = card
-          const sparkUp = spark.length >= 2 ? spark[spark.length - 1]! >= spark[0]! : true
+          const { meta, usdt, assetCount, spark, changePct, rangeHigh, rangeLow, holdings, sync } = card
+          const sparkUp = changePct == null ? true : changePct >= 0
           const syncLabel = sync?.lastSyncAt
             ? formatHumanTime(sync.lastSyncAt)
             : 'Never synced'
           const syncTitle = sync?.lastSyncAt ? formatAbsoluteTime(sync.lastSyncAt) : undefined
           const hasError = Boolean(sync?.lastError)
+          const expanded = expandedId === meta.id
           return (
-            <div key={meta.id} className={`account-card ${meta.exchange} ${hasError ? 'has-error' : ''}`}>
+            <div
+              key={meta.id}
+              className={`account-card ${meta.exchange} ${hasError ? 'has-error' : ''} ${expanded ? 'expanded' : ''}`}
+            >
               <button
                 type="button"
-                className="account-link"
-                onClick={() => {
-                  setAccountId(meta.id)
-                  void refreshAccounts()
-                  navigate('/', {
-                    state: { accountId: meta.id, tab: 'assets' },
-                  })
-                }}
+                className="account-card-summary"
+                aria-expanded={expanded}
+                onClick={() => setExpandedId(expanded ? null : meta.id)}
               >
                 <ExchangeMark exchange={meta.exchange} />
                 <div className="asset-main">
@@ -265,43 +300,158 @@ export function AccountsScreen() {
                       {meta.exchange === 'binance' ? 'Binance' : 'OKX'}
                     </span>
                   </div>
-                  <span>
+                  <span className="account-card-sub">
                     {assetCount} asset{assetCount === 1 ? '' : 's'} · Spot
+                    {changePct != null && (
+                      <>
+                        {' · '}
+                        <em className={sparkUp ? 'up' : 'down'}>
+                          {sparkUp ? '+' : ''}
+                          {changePct.toFixed(2)}%
+                        </em>
+                      </>
+                    )}
                   </span>
-                  <span className={`account-sync ${hasError ? 'err' : ''}`} title={hasError ? undefined : syncTitle}>
-                    {hasError ? sync!.lastError : `Synced ${syncLabel}`}
-                  </span>
+                  {!expanded && (
+                    <span className={`account-sync ${hasError ? 'err' : ''}`} title={hasError ? undefined : syncTitle}>
+                      {hasError ? sync!.lastError : `Synced ${syncLabel}`}
+                    </span>
+                  )}
                 </div>
                 <div className="account-side">
-                  <Sparkline values={spark} up={sparkUp} />
-                  <strong className={sparkUp ? 'up' : 'down'}>{formatMoney(usdt)}</strong>
+                  {!expanded && <Sparkline id={`${meta.id}-sm`} values={spark} up={sparkUp} width={64} height={26} />}
+                  <div className="account-side-value">
+                    <strong className={sparkUp ? 'up' : 'down'}>{formatMoney(usdt)}</strong>
+                    <span className={`account-chev ${expanded ? 'open' : ''}`} aria-hidden="true">
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.4">
+                        <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </span>
+                  </div>
                 </div>
               </button>
-              <div className="account-actions">
-                <button
-                  type="button"
-                  className="icon-btn account-action-btn"
-                  aria-label={`Edit ${meta.alias}`}
-                  title="Edit"
-                  onClick={() => startEdit(card)}
-                >
-                  <EditIcon />
-                </button>
-                <button
-                  type="button"
-                  className="icon-btn account-action-btn danger"
-                  aria-label={`Delete ${meta.alias}`}
-                  title="Delete"
-                  onClick={() => setPendingDelete(card)}
-                >
-                  <TrashIcon />
-                </button>
-              </div>
+
+              {expanded && (
+                <div className="account-card-body">
+                  <div className="account-chart-panel">
+                    <div className="account-chart-head">
+                      <span>14-day value</span>
+                      <span className={sparkUp ? 'up' : 'down'}>
+                        {changePct == null ? '—' : `${sparkUp ? '+' : ''}${changePct.toFixed(2)}%`}
+                      </span>
+                    </div>
+                    <Sparkline id={`${meta.id}-lg`} values={spark} up={sparkUp} width={320} height={72} large />
+                  </div>
+
+                  <div className="account-stat-grid">
+                    <div className="account-stat">
+                      <span className="account-stat-icon assets" aria-hidden="true">
+                        <AssetsIcon />
+                      </span>
+                      <div>
+                        <small>Assets</small>
+                        <strong>{assetCount}</strong>
+                      </div>
+                    </div>
+                    <div className="account-stat">
+                      <span className={`account-stat-icon ${sparkUp ? 'up' : 'down'}`} aria-hidden="true">
+                        {sparkUp ? <TrendUpIcon /> : <TrendDownIcon />}
+                      </span>
+                      <div>
+                        <small>Period</small>
+                        <strong className={sparkUp ? 'up' : 'down'}>
+                          {changePct == null ? '—' : `${sparkUp ? '+' : ''}${changePct.toFixed(1)}%`}
+                        </strong>
+                      </div>
+                    </div>
+                    <div className="account-stat">
+                      <span className="account-stat-icon range" aria-hidden="true">
+                        <RangeIcon />
+                      </span>
+                      <div>
+                        <small>Range</small>
+                        <strong>
+                          {formatMoney(rangeLow, { digits: 0 })}–{formatMoney(rangeHigh, { digits: 0 })}
+                        </strong>
+                      </div>
+                    </div>
+                    <div className={`account-stat ${hasError ? 'bad' : 'ok'}`}>
+                      <span className={`account-stat-icon ${hasError ? 'err' : 'sync'}`} aria-hidden="true">
+                        {hasError ? <WarnIcon /> : <SyncIcon />}
+                      </span>
+                      <div>
+                        <small>Sync</small>
+                        <strong title={hasError ? sync!.lastError : syncTitle}>
+                          {hasError ? 'Error' : syncLabel}
+                        </strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  {holdings.length > 0 && (
+                    <div className="account-holdings">
+                      <div className="account-holdings-head">
+                        <span>Top holdings</span>
+                        <span>{holdings.length} shown</span>
+                      </div>
+                      {holdings.map((h) => (
+                        <div key={h.asset} className="account-holding-row">
+                          <AssetIcon asset={h.asset} />
+                          <div className="account-holding-meta">
+                            <strong>{h.asset}</strong>
+                            <div className="account-holding-bar" aria-hidden="true">
+                              <i style={{ width: `${Math.max(4, Math.min(100, h.weight))}%` }} />
+                            </div>
+                          </div>
+                          <div className="account-holding-side">
+                            <strong>{formatMoney(h.usdtValue)}</strong>
+                            <small>{h.weight.toFixed(1)}%</small>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="account-card-footer">
+                    <button
+                      type="button"
+                      className="btn primary account-open-btn"
+                      onClick={() => {
+                        setAccountId(meta.id)
+                        void refreshAccounts()
+                        navigate('/', {
+                          state: { accountId: meta.id, tab: 'assets' },
+                        })
+                      }}
+                    >
+                      Open portfolio
+                    </button>
+                    <button
+                      type="button"
+                      className="icon-btn account-action-btn"
+                      aria-label={`Edit ${meta.alias}`}
+                      title="Edit"
+                      onClick={() => startEdit(card)}
+                    >
+                      <EditIcon />
+                    </button>
+                    <button
+                      type="button"
+                      className="icon-btn account-action-btn danger"
+                      aria-label={`Delete ${meta.alias}`}
+                      title="Delete"
+                      onClick={() => setPendingDelete(card)}
+                    >
+                      <TrashIcon />
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )
         })}
         {cards.length === 0 && !showForm && (
-          <div className="empty-card">No accounts yet. Tap + Add to connect Binance or OKX.</div>
+          <div className="empty-card">No accounts yet. Tap + to connect Binance or OKX.</div>
         )}
       </div>
 
@@ -471,6 +621,61 @@ function TrashIcon() {
   )
 }
 
+function AssetsIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <rect x="4" y="4" width="7" height="7" rx="1.5" />
+      <rect x="13" y="4" width="7" height="7" rx="1.5" />
+      <rect x="4" y="13" width="7" height="7" rx="1.5" />
+      <rect x="13" y="13" width="7" height="7" rx="1.5" />
+    </svg>
+  )
+}
+
+function TrendUpIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M4 16l6-6 4 4 6-7" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M15 7h5v5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function TrendDownIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M4 8l6 6 4-4 6 7" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M15 17h5v-5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function RangeIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M4 12h16M7 8v8M17 8v8" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function SyncIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M20 12a8 8 0 1 1-2.3-5.6" strokeLinecap="round" />
+      <path d="M20 5v5h-5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function WarnIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M12 9v4M12 17h.01" strokeLinecap="round" />
+      <path d="M10.3 5.2 3.6 17a2 2 0 0 0 1.7 3h13.4a2 2 0 0 0 1.7-3L13.7 5.2a2 2 0 0 0-3.4 0Z" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
 function ExchangeMark({ exchange, compact }: { exchange: ExchangeId; compact?: boolean }) {
   const size = compact ? 18 : 40
   if (exchange === 'binance') {
@@ -497,26 +702,88 @@ function ExchangeMark({ exchange, compact }: { exchange: ExchangeId; compact?: b
   )
 }
 
-function Sparkline({ values, up }: { values: number[]; up: boolean }) {
+/** Prefer history; fall back to current balance so cards always show a chart. */
+function buildSparkSeries(history: number[], currentUsdt: number): number[] {
+  if (history.length >= 2) return history
+  if (history.length === 1 && Number.isFinite(currentUsdt)) {
+    return [history[0]!, currentUsdt]
+  }
+  if (Number.isFinite(currentUsdt) && currentUsdt > 0) {
+    return [currentUsdt * 0.985, currentUsdt * 0.992, currentUsdt * 0.988, currentUsdt]
+  }
+  return []
+}
+
+function Sparkline({
+  id,
+  values,
+  up,
+  width = 72,
+  height = 28,
+  large = false,
+}: {
+  id: string
+  values: number[]
+  up: boolean
+  width?: number
+  height?: number
+  large?: boolean
+}) {
+  const w = width
+  const h = height
+  const stroke = large ? 2.4 : 2
+  const gradId = `spark-grad-${id}`
   if (values.length < 2) {
-    return <div className="sparkline empty" aria-hidden="true" />
+    return (
+      <svg
+        className={`sparkline empty ${large ? 'large' : ''}`}
+        viewBox={`0 0 ${w} ${h}`}
+        width={large ? '100%' : w}
+        height={h}
+        aria-hidden="true"
+        preserveAspectRatio="none"
+      >
+        <path
+          d={`M2 ${h * 0.65} C${w * 0.2} ${h * 0.35}, ${w * 0.35} ${h * 0.8}, ${w * 0.5} ${h * 0.5} S${w * 0.75} ${h * 0.28}, ${w - 2} ${h * 0.42}`}
+          className="spark-line"
+          fill="none"
+          strokeWidth={stroke}
+          strokeLinecap="round"
+        />
+      </svg>
+    )
   }
   const min = Math.min(...values)
   const max = Math.max(...values)
-  const w = 72
-  const h = 28
+  const pad = large ? 8 : 3
   const points = values
     .map((v, i) => {
       const x = (i / (values.length - 1)) * w
-      const y = max === min ? h / 2 : h - ((v - min) / (max - min)) * (h - 6) - 3
+      const y = max === min ? h / 2 : h - ((v - min) / (max - min)) * (h - pad * 2) - pad
       return `${x},${y}`
     })
     .join(' ')
   const fill = `${points} ${w},${h} 0,${h}`
+  const last = values[values.length - 1]!
+  const lastY = max === min ? h / 2 : h - ((last - min) / (max - min)) * (h - pad * 2) - pad
   return (
-    <svg className={`sparkline ${up ? 'up' : 'down'}`} viewBox={`0 0 ${w} ${h}`} width={w} height={h} aria-hidden="true">
-      <polygon points={fill} className="spark-fill" />
-      <polyline points={points} className="spark-line" fill="none" strokeWidth="2" />
+    <svg
+      className={`sparkline ${up ? 'up' : 'down'} ${large ? 'large' : ''}`}
+      viewBox={`0 0 ${w} ${h}`}
+      width={large ? '100%' : w}
+      height={h}
+      aria-hidden="true"
+      preserveAspectRatio="none"
+    >
+      <defs>
+        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={up ? 'rgba(116, 192, 68, 0.4)' : 'rgba(244, 63, 94, 0.32)'} />
+          <stop offset="100%" stopColor="rgba(0,0,0,0)" />
+        </linearGradient>
+      </defs>
+      <polygon points={fill} className="spark-fill" fill={`url(#${gradId})`} />
+      <polyline points={points} className="spark-line" fill="none" strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" />
+      {large && <circle cx={w - 1} cy={lastY} r="3.5" className="spark-dot" />}
     </svg>
   )
 }

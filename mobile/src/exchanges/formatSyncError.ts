@@ -82,9 +82,20 @@ export function explainSyncError(raw: string, accountAlias?: string): SyncErrorI
     }
     return {
       kind: 'network',
-      title: who ? `Couldn’t reach ${who}` : 'Connection problem',
-      detail:
-        'No response from the exchange. Check your internet, then try again. Cached balances stay on this device.',
+      title: 'Connection problem',
+      detail: who
+        ? `Couldn’t reach the exchange for “${who}”. Check your internet, then try again. Cached balances stay on this device.`
+        : 'No response from the exchange. Check your internet, then try again. Cached balances stay on this device.',
+    }
+  }
+
+  if (/\bHTTP\s*5\d\d\b|\b50[0234]\b|internal server error|bad gateway|service unavailable|gateway timeout/i.test(msg)) {
+    return {
+      kind: 'other',
+      title: 'Sync failed',
+      detail: who
+        ? `“${who}”: the exchange returned a server error. Wait a moment, then tap Sync again. Cached balances stay on this device.`
+        : 'The exchange returned a server error. Wait a moment, then tap Sync again. Cached balances stay on this device.',
     }
   }
 
@@ -92,15 +103,17 @@ export function explainSyncError(raw: string, accountAlias?: string): SyncErrorI
   if (/rate-limited|cooling down|Connection problem|Clock out of sync/i.test(msg)) {
     return {
       kind: /rate|cool/i.test(msg) ? 'rate' : /clock/i.test(msg) ? 'time' : 'other',
-      title: who && !msg.toLowerCase().includes(who.toLowerCase()) ? who : 'Sync issue',
-      detail: msg,
+      title: 'Sync issue',
+      detail: who && !msg.toLowerCase().includes(who.toLowerCase()) ? `${who}: ${msg}` : msg,
     }
   }
 
   return {
     kind: 'other',
-    title: who ? `${who} sync failed` : 'Sync failed',
-    detail: msg.slice(0, 220) || 'Something went wrong while refreshing. Cached data is still available.',
+    title: 'Sync failed',
+    detail: who
+      ? `“${who}”: ${msg.slice(0, 180) || 'Something went wrong while refreshing. Cached data is still available.'}`
+      : msg.slice(0, 220) || 'Something went wrong while refreshing. Cached data is still available.',
   }
 }
 

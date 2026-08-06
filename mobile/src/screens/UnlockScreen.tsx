@@ -39,9 +39,10 @@ export function UnlockScreen() {
 
   return (
     <div className="phone-stage">
-      <div className="unlock" style={{ width: '100%', maxWidth: 430, minHeight: '100%' }}>
+      <div className="phone-shell unlock unlock-fullscreen">
         <div className="unlock-card">
-          <div className="topbar-actions" style={{ justifyContent: 'flex-end', marginBottom: 8 }}>
+          <div className="unlock-top">
+            <p className="eyebrow">Spot trading</p>
             <button
               type="button"
               className="icon-btn"
@@ -51,50 +52,52 @@ export function UnlockScreen() {
               {theme === 'dark' ? '☀' : '☾'}
             </button>
           </div>
-          <p className="eyebrow">Spot trading</p>
-          <h1 className="brand">
-            My<span>Exchanges</span>
-          </h1>
-          <p className="unlock-lead">
-            {auth.initialized
-              ? 'Your Binance & OKX portfolio, orders, and markets — secured on this phone.'
-              : 'Set a recovery PIN to protect API keys. Next unlock can use fingerprint.'}
-          </p>
-          <div className="unlock-meta">
-            <span className="stamp">Binance</span>
-            <span className="stamp">OKX</span>
-            <span className="stamp hot">Offline ready</span>
+          <div className="unlock-body">
+            <h1 className="brand">
+              My<span>Exchanges</span>
+            </h1>
+            <p className="unlock-lead">
+              {auth.initialized
+                ? 'Your Binance & OKX portfolio, orders, and markets — secured on this phone.'
+                : 'Set a recovery PIN to protect API keys. Next unlock can use fingerprint.'}
+            </p>
+            <div className="unlock-meta">
+              <span className="stamp">Binance</span>
+              <span className="stamp">OKX</span>
+              <span className="stamp hot">Offline ready</span>
+            </div>
           </div>
-          {auth.initialized && auth.biometricAvailable && (
-            <button
-              type="button"
-              className="btn primary block"
-              style={{ marginBottom: 10 }}
-              disabled={busy}
-              onClick={() => void onBio()}
-            >
-              Unlock with fingerprint
-            </button>
-          )}
-          <form onSubmit={(e) => void onSubmit(e)}>
-            <label>
-              {auth.initialized ? 'Recovery PIN' : 'Create recovery PIN'}
-              <input
-                type="password"
-                inputMode="numeric"
-                autoComplete="current-password"
-                value={pin}
-                onChange={(e) => setPin(e.target.value)}
-                minLength={4}
-                required
-                placeholder="••••"
-              />
-            </label>
-            {error && <div className="banner danger">{error}</div>}
-            <button type="submit" className="btn primary block" disabled={busy || pin.length < 4}>
-              {auth.initialized ? 'Unlock' : 'Get started'}
-            </button>
-          </form>
+          <div className="unlock-actions">
+            {auth.initialized && auth.biometricAvailable && (
+              <button
+                type="button"
+                className="btn primary block"
+                disabled={busy}
+                onClick={() => void onBio()}
+              >
+                Unlock with fingerprint
+              </button>
+            )}
+            <form onSubmit={(e) => void onSubmit(e)}>
+              <label>
+                {auth.initialized ? 'Recovery PIN' : 'Create recovery PIN'}
+                <input
+                  type="password"
+                  inputMode="numeric"
+                  autoComplete="current-password"
+                  value={pin}
+                  onChange={(e) => setPin(e.target.value)}
+                  minLength={4}
+                  required
+                  placeholder="••••"
+                />
+              </label>
+              {error && <div className="banner danger">{error}</div>}
+              <button type="submit" className="btn primary block" disabled={busy || pin.length < 4}>
+                {auth.initialized ? 'Unlock' : 'Get started'}
+              </button>
+            </form>
+          </div>
         </div>
       </div>
     </div>

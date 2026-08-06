@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { TickerRow } from '../domain/types'
-import { rankTickers } from './marketRank'
+import { rankTickers, searchTickers } from './marketRank'
 
 function t(symbol: string, changePct24h: number, quoteVolume = 0): TickerRow {
   return { symbol, last: 1, changePct24h, quoteVolume, updatedAt: 0 }
@@ -29,5 +29,22 @@ describe('rankTickers', () => {
     const rows = rankTickers(sample, 'trending', 3)
     expect(rows[0].symbol).toBe('ADAUSDT')
     expect(rows.map((r) => r.symbol)).not.toContain('BNBUSDT')
+  })
+})
+
+describe('searchTickers', () => {
+  const sample = [
+    t('BTCUSDT', 1, 10),
+    t('TRXUSDT', 2, 5),
+    t('STRXUSDT', 3, 50),
+    t('ETHUSDT', 1, 20),
+  ]
+
+  it('finds coins outside category top-N by base asset', () => {
+    expect(searchTickers(sample, 'trx').map((r) => r.symbol)).toEqual(['TRXUSDT', 'STRXUSDT'])
+  })
+
+  it('prefers exact base match over substring', () => {
+    expect(searchTickers(sample, 'trx')[0]?.symbol).toBe('TRXUSDT')
   })
 })

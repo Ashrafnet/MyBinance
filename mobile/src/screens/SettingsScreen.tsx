@@ -70,9 +70,19 @@ export function SettingsScreen() {
           Dust threshold (USDT)
           <input type="number" value={dustUsdt} onChange={(e) => setDustUsdt(Number(e.target.value))} />
         </label>
-        <button className="btn primary block" onClick={() => void save()}>
-          Save settings
-        </button>
+        <div className="settings-save-row">
+          <button
+            type="button"
+            className="icon-btn primary-glow"
+            aria-label="Save settings"
+            title="Save settings"
+            onClick={() => void save()}
+          >
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden="true">
+              <path d="M5 12.5l4.5 4.5L19 7" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       <div className="panel">

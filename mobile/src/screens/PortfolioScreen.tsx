@@ -300,21 +300,33 @@ export function PortfolioScreen() {
             <div className="order-detail-actions">
               <button
                 type="button"
-                className="btn primary btn-compact"
+                className="icon-btn primary-glow"
+                aria-label="Open chart"
+                title="Open chart"
                 onClick={() =>
                   navigate('/live', {
                     state: { symbol: `${r.asset}USDT`, view: 'chart' },
                   })
                 }
               >
-                Open chart
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <path d="M4 19V5M4 19h16" strokeLinecap="round" />
+                  <path d="M8 15v-4M12 15V8M16 15v-6" strokeLinecap="round" />
+                </svg>
               </button>
               <button
                 type="button"
-                className={`btn btn-compact ${fav ? 'primary' : ''}`}
+                className={`icon-btn ${fav ? 'primary-glow' : 'muted-action'}`}
+                aria-label={fav ? 'Remove favorite' : 'Add favorite'}
+                title={fav ? 'Favorited' : 'Favorite'}
                 onClick={() => void onToggleFavAsset(r.asset)}
               >
-                {fav ? '★ Favorited' : '☆ Favorite'}
+                <svg viewBox="0 0 24 24" width="18" height="18" fill={fav ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <path
+                    d="M12 3.8l2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 16.2 7.2 18.7l.9-5.4-3.9-3.8 5.4-.8L12 3.8Z"
+                    strokeLinejoin="round"
+                  />
+                </svg>
               </button>
             </div>
           </div>
@@ -341,32 +353,36 @@ export function PortfolioScreen() {
       </section>
 
       <div className="quick-actions">
-        <button type="button" className="quick-action" onClick={() => navigate('/orders')}>
+        <button type="button" className="quick-action tone-trade" onClick={() => navigate('/orders')}>
           <span className="quick-action-btn" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8">
-              <path d="M4 7h11M15 7l-3-3M15 7l-3 3M20 17H9M9 17l3-3M9 17l3 3" strokeLinecap="round" />
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M4 7h12M16 7l-3.2-3.2M16 7l-3.2 3.2M20 17H8M8 17l3.2-3.2M8 17l3.2 3.2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </span>
           <span>Trade</span>
         </button>
-        <button type="button" className="quick-action" onClick={() => navigate('/live')}>
+        <button type="button" className="quick-action tone-markets" onClick={() => navigate('/live')}>
           <span className="quick-action-btn" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M4 19V5M4 19h16" strokeLinecap="round" />
-              <path d="M8 15v-4M12 15V8M16 15v-6" strokeLinecap="round" />
+              <path d="M8 15v-4M12 15V7M16 15v-7" strokeLinecap="round" />
             </svg>
           </span>
           <span>Markets</span>
         </button>
         <button
           type="button"
-          className="quick-action"
+          className={`quick-action tone-sync ${busy ? 'is-busy' : ''}`}
           disabled={!online || busy}
           onClick={() => void refresh()}
         >
           <span className="quick-action-btn" aria-hidden="true">
-            {busy ? '…' : (
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8">
+            {busy ? (
+              <svg className="spin" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.2">
+                <path d="M12 4a8 8 0 1 1-6.3 3.1" strokeLinecap="round" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M4 12a8 8 0 0 1 13.5-5.8M20 12a8 8 0 0 1-13.5 5.8" strokeLinecap="round" />
                 <path d="M17 3v4h4M7 21v-4H3" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
@@ -374,12 +390,12 @@ export function PortfolioScreen() {
           </span>
           <span>Sync</span>
         </button>
-        <button type="button" className="quick-action" onClick={() => navigate('/more')}>
+        <button type="button" className="quick-action tone-more" onClick={() => navigate('/more')}>
           <span className="quick-action-btn" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-              <circle cx="6" cy="12" r="1.6" />
-              <circle cx="12" cy="12" r="1.6" />
-              <circle cx="18" cy="12" r="1.6" />
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+              <circle cx="6" cy="12" r="1.8" />
+              <circle cx="12" cy="12" r="1.8" />
+              <circle cx="18" cy="12" r="1.8" />
             </svg>
           </span>
           <span>More</span>

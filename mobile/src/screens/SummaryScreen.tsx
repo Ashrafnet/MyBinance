@@ -62,7 +62,7 @@ export function SummaryScreen() {
       <p className="eyebrow">Overview</p>
       <h2>Summary</h2>
 
-      <section className="balance-hero">
+      <section className="balance-hero glass-hero">
         <p className="eyebrow light">Total Spot value</p>
         <div className="hero-total light">{formatMoney(usdt)}</div>
         <p className="hero-sub light">{btc.toFixed(6)} BTC</p>

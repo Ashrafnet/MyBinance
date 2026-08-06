@@ -295,11 +295,23 @@ export function HistoryScreen() {
         </div>
         <button
           type="button"
-          className="btn primary btn-compact"
+          className={`icon-btn page-head-action ${busy ? 'muted-action is-busy' : 'primary-glow'}`}
           disabled={!online || busy}
+          aria-label={busy ? 'Loading history' : 'Load history'}
+          title={!online ? 'Go online to load' : busy ? 'Loading…' : 'Load history'}
           onClick={() => void refresh()}
         >
-          {busy ? '…' : 'Load'}
+          {busy ? (
+            <svg className="spin" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden="true">
+              <path d="M12 4a8 8 0 1 1-6.3 3.1" strokeLinecap="round" />
+            </svg>
+          ) : (
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden="true">
+              <path d="M12 4v11" strokeLinecap="round" />
+              <path d="M7.5 11.5 12 16l4.5-4.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M5 19h14" strokeLinecap="round" />
+            </svg>
+          )}
         </button>
       </div>
 
@@ -367,7 +379,6 @@ export function HistoryScreen() {
                 aria-expanded={open}
                 onClick={() => setExpanded(open ? null : card.id)}
               >
-                <span className="history-accent" aria-hidden="true" />
                 <div className="history-body">
                   <div className="history-top">
                     <div className="history-date-block">

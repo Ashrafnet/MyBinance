@@ -17,7 +17,7 @@ import { AssetIcon, baseAsset } from '../components/AssetIcon'
 import { AppSelect } from '../components/AppSelect'
 import { formatUnitPrice } from '../services/valuation'
 import { bollinger, ema, latestIndicatorValue, macd, rsi, sma } from '../services/indicators'
-import { rankTickers, type MarketCategory } from '../utils/marketRank'
+import { rankTickers, searchTickers, type MarketCategory } from '../utils/marketRank'
 
 const TF_PILLS = [
   { label: '24h', interval: '15m' as const },
@@ -245,18 +245,19 @@ export function LiveScreen() {
   }, [fullscreen])
 
   const ordered = useMemo(() => {
-    const ranked = rankTickers(tickers, category, 80)
-    if (!q) return ranked
-    const qq = q.toLowerCase()
-    return ranked.filter((t) => t.symbol.toLowerCase().includes(qq))
+    const qq = q.trim()
+    // Search across all markets — category top-N was hiding coins like TRX.
+    if (qq) return searchTickers(tickers, qq, 80)
+    return rankTickers(tickers, category, 80)
   }, [tickers, category, q])
 
   const favList = useMemo(() => {
     const favSet = new Set(favorites)
-    return tickers
-      .filter((t) => favSet.has(t.symbol))
-      .filter((t) => !q || t.symbol.toLowerCase().includes(q.toLowerCase()))
-      .slice(0, 80)
+    const qq = q.trim()
+    if (qq) {
+      return searchTickers(tickers, qq, 80).filter((t) => favSet.has(t.symbol))
+    }
+    return tickers.filter((t) => favSet.has(t.symbol)).slice(0, 80)
   }, [tickers, favorites, q])
 
   const ticker = useMemo(() => tickers.find((t) => t.symbol === selected), [tickers, selected])
@@ -351,7 +352,7 @@ export function LiveScreen() {
                 <AssetIcon asset={asset} />
                 <div className="market-row-meta">
                   <strong>{asset}</strong>
-                  <small>{t.symbol.replace(/USDT$/, '')}</small>
+                  <small>{t.symbol}</small>
                 </div>
                 <div className="market-row-right">
                   <strong>${formatUnitPrice(t.last)}</strong>
@@ -617,14 +618,17 @@ export function LiveScreen() {
           <div className="chip-row">
             <input
               className="search-pill"
-              placeholder="Search"
+              placeholder="Search BTC, TRX, SOL…"
               value={q}
               onChange={(e) => setQ(e.target.value)}
+              autoCapitalize="off"
+              autoCorrect="off"
+              spellCheck={false}
             />
           </div>
 
           {view === 'cards' && (
-            <div className="market-pills">
+            <div className={`market-pills ${q.trim() ? 'searching' : ''}`}>
               {(
                 [
                   ['trending', 'Trending'],
@@ -635,8 +639,11 @@ export function LiveScreen() {
                 <button
                   key={id}
                   type="button"
-                  className={`market-pill ${category === id ? 'active' : ''}`}
-                  onClick={() => setCategory(id)}
+                  className={`market-pill ${!q.trim() && category === id ? 'active' : ''}`}
+                  onClick={() => {
+                    setCategory(id)
+                    if (q.trim()) setQ('')
+                  }}
                 >
                   {label}
                 </button>

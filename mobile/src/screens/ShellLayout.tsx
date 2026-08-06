@@ -21,12 +21,21 @@ export function ShellLayout() {
   const auth = useAuth()
   const online = useOnline()
   const connection = useConnectionStatus()
-  const { accountId, setAccountId, accounts } = useAccountFilter()
+  const { accountId, setAccountId, accounts, refreshAccounts } = useAccountFilter()
   const location = useLocation()
   const [theme, setTheme] = useState<Theme>(() => getStoredTheme())
   const moreActive = ['/history', '/summary', '/settings', '/more'].some((p) =>
     location.pathname.startsWith(p),
   )
+
+  useEffect(() => {
+    void refreshAccounts()
+    const onVis = () => {
+      if (document.visibilityState === 'visible') void refreshAccounts()
+    }
+    document.addEventListener('visibilitychange', onVis)
+    return () => document.removeEventListener('visibilitychange', onVis)
+  }, [refreshAccounts])
 
   useEffect(() => subscribeTheme(setTheme), [])
 
@@ -81,8 +90,13 @@ export function ShellLayout() {
             <AppSelect
               fullWidth
               icon="wallet"
+              className="topbar-account-select"
               value={accountId}
               onChange={setAccountId}
+              onOpenChange={(open) => {
+                if (open) void refreshAccounts()
+              }}
+              emptyHint="No wallets yet — add one under Wallet"
               options={[
                 { value: 'all', label: 'All accounts', hint: 'Combined Spot' },
                 ...accounts.map((a) => ({
@@ -195,26 +209,68 @@ function MoonIcon() {
   )
 }
 
+function MenuIconSummary() {
+  return (
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M4 19V5M4 19h16" strokeLinecap="round" />
+      <path d="M8 15v-3M12 15V9M16 15v-5" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function MenuIconHistory() {
+  return (
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <circle cx="12" cy="12" r="8" />
+      <path d="M12 8v4l2.5 1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function MenuIconSettings() {
+  return (
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <circle cx="12" cy="12" r="3" />
+      <path
+        d="M12 4.5v1.2M12 18.3v1.2M4.5 12h1.2M18.3 12h1.2M6.4 6.4l.85.85M16.75 16.75l.85.85M6.4 17.6l.85-.85M16.75 7.25l.85-.85"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}
+
 /** Lightweight more menu screen used by tab */
 export function MoreScreen() {
   const navigate = useNavigate()
   const items = [
-    { to: '/summary', title: 'Summary', desc: 'Total portfolio snapshot' },
-    { to: '/history', title: 'History', desc: 'Account value over time' },
-    { to: '/settings', title: 'Settings', desc: 'Refresh, dust, backups' },
-  ]
+    { to: '/summary', title: 'Summary', desc: 'Total portfolio snapshot', Icon: MenuIconSummary, tone: 'summary' },
+    { to: '/history', title: 'History', desc: 'Account value over time', Icon: MenuIconHistory, tone: 'history' },
+    { to: '/settings', title: 'Settings', desc: 'Refresh, dust, backups', Icon: MenuIconSettings, tone: 'settings' },
+  ] as const
   return (
     <div className="mobile-page">
       <p className="eyebrow">Menu</p>
       <h2>More</h2>
       <div className="menu-list">
         {items.map((item) => (
-          <button key={item.to} type="button" className="menu-item" onClick={() => navigate(item.to)}>
-            <div>
+          <button
+            key={item.to}
+            type="button"
+            className={`menu-item tone-${item.tone}`}
+            onClick={() => navigate(item.to)}
+          >
+            <span className="menu-item-icon" aria-hidden="true">
+              <item.Icon />
+            </span>
+            <div className="menu-item-copy">
               <strong>{item.title}</strong>
               <p>{item.desc}</p>
             </div>
-            <span className="chev">›</span>
+            <span className="chev" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.4">
+                <path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </span>
           </button>
         ))}
       </div>
