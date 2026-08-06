@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { OfflineBanner } from '../components/OfflineBanner'
 import { AppSelect } from '../components/AppSelect'
@@ -6,6 +6,7 @@ import { useAccountFilter } from '../app/AccountFilterContext'
 import { useAuth } from '../app/AuthContext'
 import { useConnectionStatus } from '../app/ConnectionStatus'
 import { useOnline } from '../app/OnlineContext'
+import { getStoredTheme, subscribeTheme, toggleTheme, type Theme } from '../app/theme'
 import { startAccountLiveStreams } from '../services/accountLive'
 
 const primaryTabs = [
@@ -22,9 +23,12 @@ export function ShellLayout() {
   const connection = useConnectionStatus()
   const { accountId, setAccountId, accounts } = useAccountFilter()
   const location = useLocation()
+  const [theme, setTheme] = useState<Theme>(() => getStoredTheme())
   const moreActive = ['/history', '/summary', '/settings', '/more'].some((p) =>
     location.pathname.startsWith(p),
   )
+
+  useEffect(() => subscribeTheme(setTheme), [])
 
   // Private user-data WebSockets (Binance listenKey + OKX private) — balances/orders without REST spam.
   useEffect(() => {
@@ -59,9 +63,19 @@ export function ShellLayout() {
                 {connection.label}
               </div>
             </div>
-            <button type="button" className="icon-btn" aria-label="Lock" onClick={() => auth.lock()}>
-              <LockIcon />
-            </button>
+            <div className="topbar-actions">
+              <button
+                type="button"
+                className="icon-btn"
+                aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+                onClick={() => toggleTheme()}
+              >
+                {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
+              </button>
+              <button type="button" className="icon-btn" aria-label="Lock" onClick={() => auth.lock()}>
+                <LockIcon />
+              </button>
+            </div>
           </div>
           <div className="topbar-account">
             <AppSelect
@@ -160,6 +174,23 @@ function LockIcon() {
     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8">
       <rect x="5" y="11" width="14" height="10" rx="2" />
       <path d="M8 11V8a4 4 0 0 1 8 0v3" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function SunIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 3v2M12 19v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M3 12h2M19 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function MoonIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M20 14.5A7.5 7.5 0 0 1 9.5 4 6.5 6.5 0 1 0 20 14.5Z" strokeLinejoin="round" />
     </svg>
   )
 }

@@ -1,12 +1,16 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../app/AuthContext'
+import { getStoredTheme, subscribeTheme, toggleTheme, type Theme } from '../app/theme'
 
 export function UnlockScreen() {
   const auth = useAuth()
   const [pin, setPin] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [theme, setTheme] = useState<Theme>(() => getStoredTheme())
+
+  useEffect(() => subscribeTheme(setTheme), [])
 
   if (!auth.ready) return <div className="unlock muted">Opening app…</div>
   if (auth.unlocked) return <Navigate to="/" replace />
@@ -37,6 +41,16 @@ export function UnlockScreen() {
     <div className="phone-stage">
       <div className="unlock" style={{ width: '100%', maxWidth: 430, minHeight: '100%' }}>
         <div className="unlock-card">
+          <div className="topbar-actions" style={{ justifyContent: 'flex-end', marginBottom: 8 }}>
+            <button
+              type="button"
+              className="icon-btn"
+              aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+              onClick={() => toggleTheme()}
+            >
+              {theme === 'dark' ? '☀' : '☾'}
+            </button>
+          </div>
           <p className="eyebrow">Spot trading</p>
           <h1 className="brand">
             My<span>Exchanges</span>

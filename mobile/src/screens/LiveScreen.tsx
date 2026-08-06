@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import type { Candle, ExchangeId, TickerRow } from '../domain/types'
 import { cacheGetCandles, cacheGetTickers, cacheUpsertCandles } from '../storage/cache'
 import { getFavorites, toggleFavorite } from '../storage/favorites'
@@ -13,10 +13,19 @@ import {
   type ChartType,
   type IndicatorId,
 } from '../components/CandleChart'
-import { AssetIcon } from '../components/AssetIcon'
+import { AssetIcon, baseAsset } from '../components/AssetIcon'
 import { AppSelect } from '../components/AppSelect'
 import { formatUnitPrice } from '../services/valuation'
 import { bollinger, ema, latestIndicatorValue, macd, rsi, sma } from '../services/indicators'
+import { rankTickers, type MarketCategory } from '../utils/marketRank'
+
+const TF_PILLS = [
+  { label: '24h', interval: '15m' as const },
+  { label: '1W', interval: '1h' as const },
+  { label: '1M', interval: '4h' as const },
+  { label: '6M', interval: '1d' as const },
+  { label: 'All', interval: '1w' as const },
+]
 
 const INTERVALS = ['1m', '5m', '15m', '1h', '4h', '1d', '1w'] as const
 const INTERVAL_OPTIONS = [
@@ -106,6 +115,7 @@ function formatVol(n: number) {
 export function LiveScreen() {
   const online = useOnline()
   const location = useLocation()
+  const navigate = useNavigate()
   const { accountId, accounts } = useAccountFilter()
   const exchange = useMemo<ExchangeId>(() => {
     if (accountId !== 'all') {
@@ -130,7 +140,8 @@ export function LiveScreen() {
   const [crosshair, setCrosshair] = useState<ChartCrosshair>(null)
   const [candles, setCandles] = useState<Candle[]>([])
   const [q, setQ] = useState('')
-  const [view, setView] = useState<'cards' | 'fav' | 'chart'>('fav')
+  const [view, setView] = useState<'cards' | 'fav' | 'chart'>('cards')
+  const [category, setCategory] = useState<MarketCategory>('trending')
 
   useEffect(() => {
     const prefs: ChartPrefs = { interval, chartType, indicators, logScale }
@@ -234,23 +245,19 @@ export function LiveScreen() {
   }, [fullscreen])
 
   const ordered = useMemo(() => {
-    const favSet = new Set(favorites)
-    const list = tickers
-      .filter((t) => t.symbol.includes('USDT'))
-      .filter((t) => !q || t.symbol.toLowerCase().includes(q.toLowerCase()))
-    list.sort((a, b) => {
-      const af = favSet.has(a.symbol) ? 0 : 1
-      const bf = favSet.has(b.symbol) ? 0 : 1
-      if (af !== bf) return af - bf
-      return (b.quoteVolume ?? 0) - (a.quoteVolume ?? 0)
-    })
-    return list.slice(0, 80)
-  }, [tickers, favorites, q])
+    const ranked = rankTickers(tickers, category, 80)
+    if (!q) return ranked
+    const qq = q.toLowerCase()
+    return ranked.filter((t) => t.symbol.toLowerCase().includes(qq))
+  }, [tickers, category, q])
 
   const favList = useMemo(() => {
     const favSet = new Set(favorites)
-    return ordered.filter((t) => favSet.has(t.symbol))
-  }, [ordered, favorites])
+    return tickers
+      .filter((t) => favSet.has(t.symbol))
+      .filter((t) => !q || t.symbol.toLowerCase().includes(q.toLowerCase()))
+      .slice(0, 80)
+  }, [tickers, favorites, q])
 
   const ticker = useMemo(() => tickers.find((t) => t.symbol === selected), [tickers, selected])
   const lastCandle = candles.length ? candles[candles.length - 1] : null
@@ -330,27 +337,28 @@ export function LiveScreen() {
         {rows.map((t) => {
           const fav = favorites.includes(t.symbol)
           const rowUp = t.changePct24h >= 0
+          const asset = baseAsset(t.symbol)
           return (
             <div key={t.symbol} className={`asset-row ticker-row ${fav ? 'fav' : ''}`}>
               <button
                 type="button"
-                className="ticker-main"
+                className="market-row-btn"
                 onClick={() => {
                   setSelected(t.symbol)
                   setView('chart')
                 }}
               >
-                <AssetIcon asset={t.symbol} />
-                <div className="asset-main">
-                  <strong>{t.symbol}</strong>
-                  <span>Tap for chart</span>
+                <AssetIcon asset={asset} />
+                <div className="market-row-meta">
+                  <strong>{asset}</strong>
+                  <small>{t.symbol.replace(/USDT$/, '')}</small>
                 </div>
-                <div className="asset-values">
-                  <strong>{formatUnitPrice(t.last)}</strong>
-                  <span className={rowUp ? 'up' : 'down'}>
+                <div className="market-row-right">
+                  <strong>${formatUnitPrice(t.last)}</strong>
+                  <small className={rowUp ? 'up' : 'down'}>
                     {rowUp ? '+' : ''}
                     {t.changePct24h.toFixed(2)}%
-                  </span>
+                  </small>
                 </div>
               </button>
               <button
@@ -444,31 +452,56 @@ export function LiveScreen() {
         </div>
       )}
 
-      <div className="chart-controls">
-        <AppSelect
-          className="chart-tf-select"
-          icon="type"
-          prefix="TF"
-          value={interval}
-          onChange={(v) => setInterval(v as (typeof INTERVALS)[number])}
-          options={INTERVAL_OPTIONS.map((o) => ({ value: o.value, label: o.label, hint: o.hint }))}
-        />
-
-        <div className="chart-type-seg" role="group" aria-label="Chart type">
-          {CHART_TYPES.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              className={`chart-type-btn ${chartType === t.id ? 'active' : ''}`}
-              aria-label={t.label}
-              title={t.label}
-              onClick={() => setChartType(t.id)}
-            >
-              <ChartTypeGlyph type={t.id} />
-            </button>
-          ))}
-        </div>
+      <div className="detail-price-block">
+        <div className="detail-price">{price != null ? `$${formatPx(price)}` : '—'}</div>
+        {change != null && (
+          <div className={`detail-change ${up ? 'up' : 'down'}`}>
+            {up ? '+' : ''}
+            {change.toFixed(2)}% · 24h
+          </div>
+        )}
       </div>
+
+      <div className="tf-pills" role="group" aria-label="Chart timeframe">
+        {TF_PILLS.map((p) => (
+          <button
+            key={p.label}
+            type="button"
+            className={`tf-pill ${interval === p.interval ? 'active' : ''}`}
+            onClick={() => setInterval(p.interval)}
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+
+      {showIndicators && (
+        <div className="chart-controls">
+          <AppSelect
+            className="chart-tf-select"
+            icon="type"
+            prefix="TF"
+            value={interval}
+            onChange={(v) => setInterval(v as (typeof INTERVALS)[number])}
+            options={INTERVAL_OPTIONS.map((o) => ({ value: o.value, label: o.label, hint: o.hint }))}
+          />
+
+          <div className="chart-type-seg" role="group" aria-label="Chart type">
+            {CHART_TYPES.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                className={`chart-type-btn ${chartType === t.id ? 'active' : ''}`}
+                aria-label={t.label}
+                title={t.label}
+                onClick={() => setChartType(t.id)}
+              >
+                <ChartTypeGlyph type={t.id} />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {showIndicators && (
         <div className="chart-ind-panel">
@@ -542,53 +575,81 @@ export function LiveScreen() {
         className={fullscreen ? 'chart-wrap-tall' : 'chart-wrap-pro'}
       />
       {!online && <p className="muted tight">Offline — showing cached candles.</p>}
+
+      {!fullscreen && (
+        <div className="detail-cta-row">
+          <button type="button" className="btn" onClick={() => navigate('/orders')}>
+            Orders
+          </button>
+          <button type="button" className="btn primary" onClick={() => navigate('/orders')}>
+            Trade
+          </button>
+        </div>
+      )}
     </div>
   )
 
   return (
     <div className={`mobile-page ${fullscreen ? 'chart-fs-page' : ''} ${view === 'chart' ? 'chart-mode' : ''}`}>
-      {!fullscreen && (
+      {!fullscreen && view !== 'chart' && (
         <>
-          <div className={`page-head ${view === 'chart' ? 'page-head-compact' : ''}`}>
-            {view !== 'chart' && (
-              <div>
-                <p className="eyebrow">Markets</p>
-                <h2>Live prices</h2>
-              </div>
-            )}
+          <div className="page-head">
+            <div>
+              <p className="eyebrow">Markets</p>
+              <h2>Market</h2>
+            </div>
             <div className="tabs tabs-icons">
+              <button type="button" className={`btn ${view === 'cards' ? 'active' : ''}`} onClick={() => setView('cards')}>
+                <ListIcon />
+                List
+              </button>
               <button type="button" className={`btn ${view === 'fav' ? 'active' : ''}`} onClick={() => setView('fav')}>
                 <StarIcon filled={view === 'fav'} />
                 Favorites
               </button>
-              <button
-                type="button"
-                className={`btn ${view === 'cards' ? 'active' : ''}`}
-                onClick={() => setView('cards')}
-              >
-                <ListIcon />
-                List
-              </button>
-              <button
-                type="button"
-                className={`btn ${view === 'chart' ? 'active' : ''}`}
-                onClick={() => setView('chart')}
-              >
+              <button type="button" className="btn" onClick={() => setView('chart')}>
                 <ChartIcon />
                 Chart
               </button>
             </div>
           </div>
 
-          <div className={`chip-row ${view === 'chart' ? 'chip-row-compact' : ''}`}>
+          <div className="chip-row">
             <input
               className="search-pill"
-              placeholder="Search BTC…"
+              placeholder="Search"
               value={q}
               onChange={(e) => setQ(e.target.value)}
             />
           </div>
+
+          {view === 'cards' && (
+            <div className="market-pills">
+              {(
+                [
+                  ['trending', 'Trending'],
+                  ['gainers', 'Top Gainers'],
+                  ['losers', 'Top Losers'],
+                ] as const
+              ).map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  className={`market-pill ${category === id ? 'active' : ''}`}
+                  onClick={() => setCategory(id)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
         </>
+      )}
+
+      {!fullscreen && view === 'chart' && (
+        <button type="button" className="btn btn-compact" onClick={() => setView('cards')}>
+          ← Market
+        </button>
       )}
 
       {view === 'cards' && !fullscreen &&

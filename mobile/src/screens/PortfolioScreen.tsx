@@ -13,6 +13,7 @@ import { SyncErrorBanner } from '../components/SyncErrorBanner'
 import { Toast } from '../components/Toast'
 import { AppSelect } from '../components/AppSelect'
 import { AssetIcon, baseAsset } from '../components/AssetIcon'
+import { rankTickers } from '../utils/marketRank'
 import { formatAbsoluteTime, formatHumanTime } from '../utils/time'
 
 type PortfolioTab = 'favorites' | 'assets'
@@ -211,6 +212,10 @@ export function PortfolioScreen() {
 
   const total = sumUsdt(assetRows)
   const btc = sumBtc(assetRows)
+  const topGainers = useMemo(
+    () => rankTickers([...tickers.values()], 'gainers', 8),
+    [tickers],
+  )
 
   function renderHoldingCard(r: BalanceRow) {
     const px = unitPriceUsdt(r.asset, r.total, r.usdtValue, prices)
@@ -320,147 +325,262 @@ export function PortfolioScreen() {
 
   return (
     <div className="mobile-page">
-      <section className="balance-hero">
+      <section className="balance-hero glass-hero">
         <div className="balance-hero-top">
           <div>
-            <p className="eyebrow light">Total balance</p>
+            <p className="eyebrow light">Total Balance</p>
             <div className="hero-total light">{formatMoney(total)}</div>
-            <p className="hero-sub light">{btc.toFixed(6)} BTC</p>
+            <p className="hero-sub light">
+              ≈ {btc.toFixed(6)} BTC · {accountId === 'all' ? 'All accounts' : 'Selected account'}
+            </p>
           </div>
-          <button type="button" className="fab-refresh" disabled={!online || busy} onClick={() => void refresh()}>
-            {busy ? '…' : '↻'}
-          </button>
         </div>
         <p className="hero-meta" title={lastSyncAt ? formatAbsoluteTime(lastSyncAt) : undefined}>
           Synced {lastSync}
         </p>
       </section>
 
-      {syncError && <SyncErrorBanner error={syncError} onDismiss={() => setSyncError(null)} />}
-
-      <div className="tabs tabs-stretch portfolio-tabs">
+      <div className="quick-actions">
+        <button type="button" className="quick-action" onClick={() => navigate('/orders')}>
+          <span className="quick-action-btn" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <path d="M4 7h11M15 7l-3-3M15 7l-3 3M20 17H9M9 17l3-3M9 17l3 3" strokeLinecap="round" />
+            </svg>
+          </span>
+          <span>Trade</span>
+        </button>
+        <button type="button" className="quick-action" onClick={() => navigate('/live')}>
+          <span className="quick-action-btn" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <path d="M4 19V5M4 19h16" strokeLinecap="round" />
+              <path d="M8 15v-4M12 15V8M16 15v-6" strokeLinecap="round" />
+            </svg>
+          </span>
+          <span>Markets</span>
+        </button>
         <button
           type="button"
-          className={`btn ${tab === 'favorites' ? 'active' : ''}`}
-          onClick={() => setTab('favorites')}
+          className="quick-action"
+          disabled={!online || busy}
+          onClick={() => void refresh()}
         >
-          My favorites
+          <span className="quick-action-btn" aria-hidden="true">
+            {busy ? '…' : (
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <path d="M4 12a8 8 0 0 1 13.5-5.8M20 12a8 8 0 0 1-13.5 5.8" strokeLinecap="round" />
+                <path d="M17 3v4h4M7 21v-4H3" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            )}
+          </span>
+          <span>Sync</span>
         </button>
-        <button type="button" className={`btn ${tab === 'assets' ? 'active' : ''}`} onClick={() => setTab('assets')}>
-          My assets
+        <button type="button" className="quick-action" onClick={() => navigate('/more')}>
+          <span className="quick-action-btn" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+              <circle cx="6" cy="12" r="1.6" />
+              <circle cx="12" cy="12" r="1.6" />
+              <circle cx="18" cy="12" r="1.6" />
+            </svg>
+          </span>
+          <span>More</span>
         </button>
       </div>
 
-      <div className="chip-row">
-        <input
-          className="search-pill"
-          placeholder="Search"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-        />
+      {syncError && <SyncErrorBanner error={syncError} onDismiss={() => setSyncError(null)} />}
+
+      <div className="section-head">
+        <h3>Top Gainers</h3>
+        <button type="button" className="linkish" onClick={() => navigate('/live', { state: { view: 'cards' } })}>
+          See all
+        </button>
       </div>
-
-      {tab === 'assets' && (
-        <div className="chip-row asset-tools">
-          <AppSelect
-            icon="sort"
-            prefix="Sort by"
-            value={sort}
-            onChange={(v) => setSort(v as AssetSort)}
-            options={[
-              { value: 'value-desc', label: 'Value ↓', hint: 'Highest first' },
-              { value: 'value-asc', label: 'Value ↑', hint: 'Lowest first' },
-              { value: 'name-asc', label: 'Name A–Z', hint: 'Alphabetical' },
-              { value: 'name-desc', label: 'Name Z–A', hint: 'Reverse alpha' },
-              { value: 'amount-desc', label: 'Amount ↓', hint: 'Largest balance' },
-              { value: 'amount-asc', label: 'Amount ↑', hint: 'Smallest balance' },
-            ]}
-          />
-          <button
-            type="button"
-            className={`chip-toggle ${hideSmall ? 'on' : ''}`}
-            aria-pressed={hideSmall}
-            onClick={() => setHideSmall((v) => !v)}
-          >
-            Hide &lt; ${dust}
-          </button>
-        </div>
-      )}
-
-      <div className="asset-list">
-        {tab === 'favorites' &&
-          favoriteItems.map((item) => {
-            const held = item.balance && item.balance.total > 0
-            const change = item.ticker?.changePct24h
-            const up = (change ?? 0) >= 0
-            return (
-              <div key={item.symbol} className="asset-row ticker-row fav">
-                <button
-                  type="button"
-                  className="ticker-main"
-                  onClick={() =>
-                    navigate('/live', {
-                      state: { symbol: item.symbol, view: 'chart' },
-                    })
-                  }
-                >
-                  <AssetIcon asset={item.asset} />
-                  <div className="asset-main">
-                    <div className="asset-title">
-                      <strong>{item.asset}</strong>
-                      {item.last != null && <span className="asset-price">${formatUnitPrice(item.last)}</span>}
-                    </div>
-                    <span>
-                      {held
-                        ? `${item.balance!.total} · free ${item.balance!.free}`
-                        : `${item.symbol} · tap for chart`}
-                    </span>
-                  </div>
-                  <div className="asset-values">
-                    {held ? (
-                      <>
-                        <strong>{formatMoney(item.balance!.usdtValue)}</strong>
-                        <span className={item.balance!.usdtValue >= 0 ? 'up' : 'down'}>
-                          {item.balance!.btcValue.toFixed(6)} BTC
-                        </span>
-                      </>
-                    ) : (
-                      <>
-                        <strong className={up ? 'up' : 'down'}>
-                          {change != null ? `${up ? '+' : ''}${change.toFixed(2)}%` : '—'}
-                        </strong>
-                        <span>Not held</span>
-                      </>
-                    )}
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  className="fav-btn on"
-                  aria-label="Remove favorite"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    void onToggleFavSymbol(item.symbol)
-                  }}
-                >
-                  ★
-                </button>
+      <div className="gainer-strip">
+        {topGainers.map((t) => {
+          const asset = baseAsset(t.symbol)
+          const up = t.changePct24h >= 0
+          return (
+            <button
+              key={t.symbol}
+              type="button"
+              className="gainer-card"
+              onClick={() => navigate('/live', { state: { symbol: t.symbol, view: 'chart' } })}
+            >
+              <div className="gainer-card-top">
+                <AssetIcon asset={asset} />
+                <span>{asset}</span>
               </div>
-            )
-          })}
+              <strong>${formatUnitPrice(t.last)}</strong>
+              <span className={`pct ${up ? 'up' : 'down'}`}>
+                {up ? '+' : ''}
+                {t.changePct24h.toFixed(2)}%
+              </span>
+            </button>
+          )
+        })}
+        {topGainers.length === 0 && <div className="empty-card">Sync markets to see gainers.</div>}
+      </div>
 
-        {tab === 'assets' && assetRows.map((r) => renderHoldingCard(r))}
-
-        {tab === 'favorites' && favoriteItems.length === 0 && (
+      <div className="section-head">
+        <h3>Watchlist</h3>
+        <button type="button" className="linkish" onClick={() => setTab('favorites')}>
+          Edit
+        </button>
+      </div>
+      <div className="watch-list">
+        {favoriteItems.slice(0, 6).map((item) => {
+          const change = item.ticker?.changePct24h
+          const up = (change ?? 0) >= 0
+          return (
+            <button
+              key={item.symbol}
+              type="button"
+              className="watch-row"
+              onClick={() => navigate('/live', { state: { symbol: item.symbol, view: 'chart' } })}
+            >
+              <AssetIcon asset={item.asset} />
+              <div className="watch-meta">
+                <strong>{item.asset}</strong>
+                <small>{item.symbol}</small>
+              </div>
+              <div className="watch-right">
+                <strong>{item.last != null ? `$${formatUnitPrice(item.last)}` : '—'}</strong>
+                <small className={up ? 'up' : 'down'}>
+                  {change != null ? `${up ? '+' : ''}${change.toFixed(2)}%` : '—'}
+                </small>
+              </div>
+            </button>
+          )
+        })}
+        {favoriteItems.length === 0 && (
           <div className="empty-card">No favorites yet. Star coins in Markets to see them here.</div>
         )}
-        {tab === 'assets' && assetRows.length === 0 && (
-          <div className="empty-card">
-            {accounts.length === 0
-              ? 'Add an account in Wallet, then pull to refresh.'
-              : 'No balances yet. Tap refresh on the balance card.'}
+      </div>
+
+      <div className="assets-section">
+        <div className="tabs tabs-stretch portfolio-tabs">
+          <button
+            type="button"
+            className={`btn ${tab === 'favorites' ? 'active' : ''}`}
+            onClick={() => setTab('favorites')}
+          >
+            My favorites
+          </button>
+          <button type="button" className={`btn ${tab === 'assets' ? 'active' : ''}`} onClick={() => setTab('assets')}>
+            My assets
+          </button>
+        </div>
+
+        <div className="chip-row">
+          <input
+            className="search-pill"
+            placeholder="Search"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
+        </div>
+
+        {tab === 'assets' && (
+          <div className="chip-row asset-tools">
+            <AppSelect
+              icon="sort"
+              prefix="Sort by"
+              value={sort}
+              onChange={(v) => setSort(v as AssetSort)}
+              options={[
+                { value: 'value-desc', label: 'Value ↓', hint: 'Highest first' },
+                { value: 'value-asc', label: 'Value ↑', hint: 'Lowest first' },
+                { value: 'name-asc', label: 'Name A–Z', hint: 'Alphabetical' },
+                { value: 'name-desc', label: 'Name Z–A', hint: 'Reverse alpha' },
+                { value: 'amount-desc', label: 'Amount ↓', hint: 'Largest balance' },
+                { value: 'amount-asc', label: 'Amount ↑', hint: 'Smallest balance' },
+              ]}
+            />
+            <button
+              type="button"
+              className={`chip-toggle ${hideSmall ? 'on' : ''}`}
+              aria-pressed={hideSmall}
+              onClick={() => setHideSmall((v) => !v)}
+            >
+              Hide &lt; ${dust}
+            </button>
           </div>
         )}
+
+        <div className="asset-list">
+          {tab === 'favorites' &&
+            favoriteItems.map((item) => {
+              const held = item.balance && item.balance.total > 0
+              const change = item.ticker?.changePct24h
+              const up = (change ?? 0) >= 0
+              return (
+                <div key={item.symbol} className="asset-row ticker-row fav">
+                  <button
+                    type="button"
+                    className="ticker-main"
+                    onClick={() =>
+                      navigate('/live', {
+                        state: { symbol: item.symbol, view: 'chart' },
+                      })
+                    }
+                  >
+                    <AssetIcon asset={item.asset} />
+                    <div className="asset-main">
+                      <div className="asset-title">
+                        <strong>{item.asset}</strong>
+                        {item.last != null && <span className="asset-price">${formatUnitPrice(item.last)}</span>}
+                      </div>
+                      <span>
+                        {held
+                          ? `${item.balance!.total} · free ${item.balance!.free}`
+                          : `${item.symbol} · tap for chart`}
+                      </span>
+                    </div>
+                    <div className="asset-values">
+                      {held ? (
+                        <>
+                          <strong>{formatMoney(item.balance!.usdtValue)}</strong>
+                          <span className={item.balance!.usdtValue >= 0 ? 'up' : 'down'}>
+                            {item.balance!.btcValue.toFixed(6)} BTC
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <strong className={up ? 'up' : 'down'}>
+                            {change != null ? `${up ? '+' : ''}${change.toFixed(2)}%` : '—'}
+                          </strong>
+                          <span>Not held</span>
+                        </>
+                      )}
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    className="fav-btn on"
+                    aria-label="Remove favorite"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      void onToggleFavSymbol(item.symbol)
+                    }}
+                  >
+                    ★
+                  </button>
+                </div>
+              )
+            })}
+
+          {tab === 'assets' && assetRows.map((r) => renderHoldingCard(r))}
+
+          {tab === 'favorites' && favoriteItems.length === 0 && (
+            <div className="empty-card">No favorites yet. Star coins in Markets to see them here.</div>
+          )}
+          {tab === 'assets' && assetRows.length === 0 && (
+            <div className="empty-card">
+              {accounts.length === 0
+                ? 'Add an account in Wallet, then pull to refresh.'
+                : 'No balances yet. Tap Sync above.'}
+            </div>
+          )}
+        </div>
       </div>
 
       <Toast message={toast} onClose={() => setToast(null)} />
