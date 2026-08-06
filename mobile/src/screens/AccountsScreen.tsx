@@ -5,6 +5,19 @@ import { deleteCredentials, saveCredentials } from '../storage/vault'
 import { getExchange } from '../exchanges/registry'
 import { useOnline } from '../app/OnlineContext'
 import { Toast } from '../components/Toast'
+import { Capacitor } from '@capacitor/core'
+
+function isUnreachableFromBrowser(err: unknown): boolean {
+  const msg = (err instanceof Error ? err.message : String(err)).toLowerCase()
+  return (
+    msg.includes('failed to fetch') ||
+    msg.includes('networkerror') ||
+    msg.includes('network error') ||
+    msg.includes('cors') ||
+    msg.includes('load failed') ||
+    msg.includes('access control')
+  )
+}
 
 export function AccountsScreen() {
   const online = useOnline()
@@ -15,6 +28,7 @@ export function AccountsScreen() {
   const [secretKey, setSecretKey] = useState('')
   const [passphrase, setPassphrase] = useState('')
   const [toast, setToast] = useState<string | null>(null)
+  const [formError, setFormError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
   async function reload() {
@@ -28,13 +42,43 @@ export function AccountsScreen() {
   async function onAdd(e: FormEvent) {
     e.preventDefault()
     setBusy(true)
+    setFormError(null)
     try {
-      const creds = { apiKey, secretKey, passphrase: exchange === 'okx' ? passphrase : undefined }
-      if (online) {
-        await getExchange(exchange).validateCredentials(creds)
+      const creds = {
+        apiKey: apiKey.trim(),
+        secretKey: secretKey.trim(),
+        passphrase: exchange === 'okx' ? passphrase.trim() : undefined,
       }
+      if (!creds.apiKey || !creds.secretKey) {
+        throw new Error('API key and secret are required')
+      }
+      if (exchange === 'okx' && !creds.passphrase) {
+        throw new Error('OKX passphrase is required')
+      }
+
+      let validated = false
+      if (online) {
+        try {
+          await getExchange(exchange).validateCredentials(creds)
+          validated = true
+        } catch (err) {
+          // Browser pages cannot call signed Binance/OKX REST (CORS).
+          // Still save locally so the desk works; native Capacitor can verify.
+          if (isUnreachableFromBrowser(err) || !Capacitor.isNativePlatform()) {
+            validated = false
+          } else {
+            throw err
+          }
+        }
+      }
+
       const id = crypto.randomUUID()
-      const meta: AccountMeta = { id, alias: alias || `${exchange} account`, exchange, createdAt: Date.now() }
+      const meta: AccountMeta = {
+        id,
+        alias: alias.trim() || `${exchange} account`,
+        exchange,
+        createdAt: Date.now(),
+      }
       await saveCredentials(id, creds)
       await upsertAccount(meta)
       setAlias('')
@@ -42,9 +86,17 @@ export function AccountsScreen() {
       setSecretKey('')
       setPassphrase('')
       await reload()
-      setToast(online ? 'Account saved and validated' : 'Account saved (not validated offline)')
+      if (validated) {
+        setToast('Account saved and verified with the exchange')
+      } else if (online) {
+        setToast('Account saved on this device (browser cannot verify keys — use Android app or Refresh later)')
+      } else {
+        setToast('Account saved (offline — not verified yet)')
+      }
     } catch (err) {
-      setToast(err instanceof Error ? err.message : 'Failed to add account')
+      const message = err instanceof Error ? err.message : 'Failed to add account'
+      setFormError(message)
+      setToast(message)
     } finally {
       setBusy(false)
     }
@@ -59,8 +111,9 @@ export function AccountsScreen() {
 
   return (
     <div>
+      <p className="eyebrow">Keys</p>
       <h2>Accounts</h2>
-      <p className="muted">Manage Binance and OKX Spot API keys. Secrets stay encrypted on this device.</p>
+      <p className="muted">Add Binance or OKX Spot API keys. Secrets stay encrypted on this device.</p>
 
       <div className="panel">
         <h3>Your accounts</h3>
@@ -71,7 +124,7 @@ export function AccountsScreen() {
               <strong>{a.alias}</strong>
               <div className="muted">{a.exchange}</div>
             </div>
-            <button className="btn danger" onClick={() => void onDelete(a.id)}>
+            <button type="button" className="btn danger" onClick={() => void onDelete(a.id)}>
               Delete
             </button>
           </div>
@@ -105,7 +158,8 @@ export function AccountsScreen() {
             <input value={passphrase} onChange={(e) => setPassphrase(e.target.value)} required autoComplete="off" />
           </label>
         )}
-        <button className="btn primary" disabled={busy}>
+        {formError && <div className="banner danger">{formError}</div>}
+        <button type="submit" className="btn primary" disabled={busy}>
           {busy ? 'Saving…' : 'Save account'}
         </button>
       </form>
