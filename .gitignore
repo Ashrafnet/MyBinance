@@ -1,0 +1,25 @@
+## Build
+**/bin/
+**/obj/
+**/publish/
+
+## Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## Secrets / local data
+**/_accounts.json
+**/_accounts_data.json
+**/*_accounts*.json
+.env
+.env.*
+*.pem
+credentials.json
+
+## OS / misc
+Thumbs.db
+Desktop.ini
+*.log
