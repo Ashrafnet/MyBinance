@@ -66,7 +66,6 @@ export function PortfolioScreen() {
       rows.filter((r) => {
         if (r.total <= 0) return false
         if (q && !r.asset.toLowerCase().includes(q.toLowerCase())) return false
-        // Keep unpriced balances visible; only hide known dust.
         if (r.usdtValue > 0 && r.usdtValue < dust) return false
         return true
       }),
@@ -95,71 +94,73 @@ export function PortfolioScreen() {
     }
   }
 
+  const total = sumUsdt(filtered)
+  const btc = sumBtc(filtered)
+
   return (
-    <div>
-      <div className="page-head">
-        <div>
-          <p className="eyebrow">Balances</p>
-          <h2>Portfolio</h2>
+    <div className="mobile-page">
+      <section className="balance-hero">
+        <div className="balance-hero-top">
+          <div>
+            <p className="eyebrow light">Total balance</p>
+            <div className="hero-total light">${total.toFixed(2)}</div>
+            <p className="hero-sub light">{btc.toFixed(6)} BTC</p>
+          </div>
+          <button type="button" className="fab-refresh" disabled={!online || busy} onClick={() => void refresh()}>
+            {busy ? '…' : '↻'}
+          </button>
         </div>
-        <button type="button" className="btn primary" disabled={!online || busy} onClick={() => void refresh()}>
-          {busy ? 'Syncing…' : 'Refresh'}
-        </button>
-      </div>
-      <div className="hero-total">${sumUsdt(filtered).toFixed(2)}</div>
-      <p className="hero-sub" style={{ marginBottom: 14 }}>
-        {sumBtc(filtered).toFixed(6)} BTC · synced {lastSync}
-      </p>
+        <p className="hero-meta">Synced {lastSync}</p>
+      </section>
+
       {syncError && <div className="banner danger">{syncError}</div>}
-      <div className="row filters">
-        <select value={accountId} onChange={(e) => setAccountId(e.target.value)}>
+
+      <div className="section-head">
+        <h3>Assets</h3>
+      </div>
+
+      <div className="chip-row">
+        <select className="chip-select" value={accountId} onChange={(e) => setAccountId(e.target.value)}>
           <option value="all">All accounts</option>
           {accounts.map((a) => (
             <option key={a.id} value={a.id}>
-              {a.alias} ({a.exchange})
+              {a.alias}
             </option>
           ))}
         </select>
         <input
-          className="grow"
-          placeholder="Search asset"
+          className="search-pill"
+          placeholder="Search"
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
       </div>
-      <div className="panel balance-shell">
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Asset</th>
-                <th>Total</th>
-                <th>Free</th>
-                <th>USDT</th>
-                <th>BTC</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((r) => (
-                <tr key={r.asset}>
-                  <td>{r.asset}</td>
-                  <td>{r.total}</td>
-                  <td>{r.free}</td>
-                  <td>${r.usdtValue.toFixed(2)}</td>
-                  <td>{r.btcValue.toFixed(6)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {filtered.length === 0 && (
-            <p className="muted" style={{ padding: '8px 10px 16px' }}>
-              {accounts.length === 0
-                ? 'No balances yet. Add an account under Keys, then tap Refresh while online.'
-                : 'No balances loaded. Tap Refresh while online to pull from the exchange.'}
-            </p>
-          )}
-        </div>
+
+      <div className="asset-list">
+        {filtered.map((r) => (
+          <div key={r.asset} className="asset-row">
+            <div className="asset-avatar">{r.asset.slice(0, 1)}</div>
+            <div className="asset-main">
+              <strong>{r.asset}</strong>
+              <span>
+                {r.total} · free {r.free}
+              </span>
+            </div>
+            <div className="asset-values">
+              <strong>${r.usdtValue.toFixed(2)}</strong>
+              <span className={r.usdtValue >= 0 ? 'up' : 'down'}>{r.btcValue.toFixed(6)} BTC</span>
+            </div>
+          </div>
+        ))}
+        {filtered.length === 0 && (
+          <div className="empty-card">
+            {accounts.length === 0
+              ? 'Add an account in Wallet, then pull to refresh.'
+              : 'No balances yet. Tap refresh on the balance card.'}
+          </div>
+        )}
       </div>
+
       <Toast message={toast} onClose={() => setToast(null)} />
     </div>
   )

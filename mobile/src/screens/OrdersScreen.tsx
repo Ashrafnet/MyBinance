@@ -85,20 +85,22 @@ export function OrdersScreen() {
     }
   }
 
+  const list = tab === 'open' ? open : history
+
   return (
-    <div>
+    <div className="mobile-page">
       <p className="eyebrow">Trading</p>
       <h2>Orders</h2>
-      <div className="row filters">
-        <select value={accountId} onChange={(e) => setAccountId(e.target.value)}>
-          {accounts.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.alias} ({a.exchange})
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="tabs">
+
+      <select className="chip-select full-width" value={accountId} onChange={(e) => setAccountId(e.target.value)}>
+        {accounts.map((a) => (
+          <option key={a.id} value={a.id}>
+            {a.alias} ({a.exchange})
+          </option>
+        ))}
+      </select>
+
+      <div className="tabs tabs-stretch">
         <button type="button" className={`btn ${tab === 'open' ? 'active' : ''}`} onClick={() => setTab('open')}>
           Open
         </button>
@@ -112,18 +114,27 @@ export function OrdersScreen() {
 
       {tab === 'place' && (
         <form className="panel" onSubmit={(e) => void place(e)}>
-          <div className="form-grid">
-            <label className="full">
-              Symbol
-              <input value={symbol} onChange={(e) => setSymbol(e.target.value)} />
-            </label>
-            <label>
-              Side
-              <select value={side} onChange={(e) => setSide(e.target.value as OrderSide)}>
-                <option value="buy">Buy</option>
-                <option value="sell">Sell</option>
-              </select>
-            </label>
+          <label>
+            Symbol
+            <input value={symbol} onChange={(e) => setSymbol(e.target.value)} />
+          </label>
+          <div className="side-toggle">
+            <button
+              type="button"
+              className={`side-btn buy ${side === 'buy' ? 'active' : ''}`}
+              onClick={() => setSide('buy')}
+            >
+              Buy
+            </button>
+            <button
+              type="button"
+              className={`side-btn sell ${side === 'sell' ? 'active' : ''}`}
+              onClick={() => setSide('sell')}
+            >
+              Sell
+            </button>
+          </div>
+          <div className="form-grid two">
             <label>
               Type
               <select value={type} onChange={(e) => setType(e.target.value as OrderType)}>
@@ -136,56 +147,49 @@ export function OrdersScreen() {
               <input value={quantity} onChange={(e) => setQuantity(e.target.value)} />
             </label>
             {type === 'limit' && (
-              <label>
+              <label className="full">
                 Price
                 <input value={price} onChange={(e) => setPrice(e.target.value)} required />
               </label>
             )}
           </div>
-          <button type="submit" className="btn primary block" disabled={!online}>
-            Place order
+          <button type="submit" className={`btn block ${side === 'buy' ? 'buy' : 'sell'}`} disabled={!online}>
+            {side === 'buy' ? 'Buy' : 'Sell'} {symbol.toUpperCase()}
           </button>
         </form>
       )}
 
       {(tab === 'open' || tab === 'history') && (
-        <div className="panel balance-shell">
-          <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Symbol</th>
-                <th>Side</th>
-                <th>Type</th>
-                <th>Qty</th>
-                <th>Price</th>
-                <th>Status</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {(tab === 'open' ? open : history).map((o) => (
-                <tr key={o.id}>
-                  <td>{o.symbol}</td>
-                  <td className={o.side === 'buy' ? 'up' : 'down'}>{o.side}</td>
-                  <td>{o.type}</td>
-                  <td>
-                    {o.filledQuantity}/{o.quantity}
-                  </td>
-                  <td>{o.price ?? 'mkt'}</td>
-                  <td>{o.status}</td>
-                  <td>
-                    {tab === 'open' && (
-                      <button type="button" className="btn danger btn-compact" disabled={!online} onClick={() => void cancel(o)}>
-                        Cancel
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          </div>
+        <div className="asset-list">
+          {list.map((o) => (
+            <div key={o.id} className="order-row">
+              <div className="order-main">
+                <div className="order-top">
+                  <strong>{o.symbol}</strong>
+                  <span className={`pill ${o.side === 'buy' ? 'up' : 'down'}`}>{o.side}</span>
+                </div>
+                <span>
+                  {o.type} · {o.filledQuantity}/{o.quantity} · {o.price ?? 'mkt'}
+                </span>
+                <span className="order-status">{o.status}</span>
+              </div>
+              {tab === 'open' && (
+                <button
+                  type="button"
+                  className="btn danger btn-compact"
+                  disabled={!online}
+                  onClick={() => void cancel(o)}
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
+          ))}
+          {list.length === 0 && (
+            <div className="empty-card">
+              {tab === 'open' ? 'No open orders.' : 'No order history cached yet.'}
+            </div>
+          )}
         </div>
       )}
       <Toast message={toast} onClose={() => setToast(null)} />

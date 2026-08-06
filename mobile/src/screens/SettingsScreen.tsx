@@ -53,11 +53,13 @@ export function SettingsScreen() {
   }
 
   return (
-    <div>
+    <div className="mobile-page">
+      <p className="eyebrow">Preferences</p>
       <h2>Settings</h2>
+
       <div className="panel">
         <label>
-          Auto-refresh seconds
+          Auto-refresh (seconds)
           <input
             type="number"
             value={autoRefreshSeconds}
@@ -68,17 +70,18 @@ export function SettingsScreen() {
           Dust threshold (USDT)
           <input type="number" value={dustUsdt} onChange={(e) => setDustUsdt(Number(e.target.value))} />
         </label>
-        <button className="btn primary" onClick={() => void save()}>
-          Save
+        <button className="btn primary block" onClick={() => void save()}>
+          Save settings
         </button>
       </div>
+
       <div className="panel">
         <h3>Data</h3>
-        <div className="row">
-          <button className="btn" onClick={() => void onExport()}>
+        <div className="stack-actions">
+          <button className="btn block" onClick={() => void onExport()}>
             Export encrypted vault
           </button>
-          <label className="btn" style={{ marginBottom: 0 }}>
+          <label className="btn block file-btn">
             Import vault
             <input
               type="file"
@@ -90,7 +93,7 @@ export function SettingsScreen() {
               }}
             />
           </label>
-          <button className="btn danger" onClick={() => void clearCache()}>
+          <button className="btn danger block" onClick={() => void clearCache()}>
             Clear cache
           </button>
         </div>

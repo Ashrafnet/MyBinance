@@ -30,6 +30,7 @@ export function AccountsScreen() {
   const [toast, setToast] = useState<string | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [showForm, setShowForm] = useState(false)
 
   async function reload() {
     setAccounts(await listAccounts())
@@ -62,8 +63,6 @@ export function AccountsScreen() {
           await getExchange(exchange).validateCredentials(creds)
           validated = true
         } catch (err) {
-          // Browser pages cannot call signed Binance/OKX REST (CORS).
-          // Still save locally so the desk works; native Capacitor can verify.
           if (isUnreachableFromBrowser(err) || !Capacitor.isNativePlatform()) {
             validated = false
           } else {
@@ -85,6 +84,7 @@ export function AccountsScreen() {
       setApiKey('')
       setSecretKey('')
       setPassphrase('')
+      setShowForm(false)
       await reload()
       if (validated) {
         setToast('Account saved and verified with the exchange')
@@ -110,61 +110,79 @@ export function AccountsScreen() {
   }
 
   return (
-    <div>
-      <p className="eyebrow">Keys</p>
-      <h2>Accounts</h2>
-      <p className="muted">Add Binance or OKX Spot API keys. Secrets stay encrypted on this device.</p>
+    <div className="mobile-page">
+      <div className="page-head">
+        <div>
+          <p className="eyebrow">Wallet</p>
+          <h2>Accounts</h2>
+        </div>
+        <button type="button" className="btn primary btn-compact" onClick={() => setShowForm((v) => !v)}>
+          {showForm ? 'Close' : '+ Add'}
+        </button>
+      </div>
+      <p className="muted tight">API keys stay encrypted on this device.</p>
 
-      <div className="panel">
-        <h3>Your accounts</h3>
-        {accounts.length === 0 && <p className="muted">No accounts yet.</p>}
+      <div className="asset-list">
         {accounts.map((a) => (
-          <div key={a.id} className="account-row">
-            <div>
+          <div key={a.id} className="asset-row">
+            <div className={`asset-avatar ${a.exchange}`}>{a.exchange === 'binance' ? 'B' : 'O'}</div>
+            <div className="asset-main">
               <strong>{a.alias}</strong>
-              <div className="muted">{a.exchange}</div>
+              <span>{a.exchange === 'binance' ? 'Binance Spot' : 'OKX Spot'}</span>
             </div>
             <button type="button" className="btn danger btn-compact" onClick={() => void onDelete(a.id)}>
               Delete
             </button>
           </div>
         ))}
+        {accounts.length === 0 && !showForm && (
+          <div className="empty-card">No accounts yet. Tap + Add to connect Binance or OKX.</div>
+        )}
       </div>
 
-      <form className="panel" onSubmit={(e) => void onAdd(e)}>
-        <h3>Add account</h3>
-        <div className="form-grid">
+      {showForm && (
+        <form className="panel" onSubmit={(e) => void onAdd(e)}>
+          <h3>Add account</h3>
           <label>
             Alias
             <input value={alias} onChange={(e) => setAlias(e.target.value)} placeholder="Main Binance" />
           </label>
+          <div className="side-toggle">
+            <button
+              type="button"
+              className={`side-btn ${exchange === 'binance' ? 'active' : ''}`}
+              onClick={() => setExchange('binance')}
+            >
+              Binance
+            </button>
+            <button
+              type="button"
+              className={`side-btn ${exchange === 'okx' ? 'active' : ''}`}
+              onClick={() => setExchange('okx')}
+            >
+              OKX
+            </button>
+          </div>
           <label>
-            Exchange
-            <select value={exchange} onChange={(e) => setExchange(e.target.value as ExchangeId)}>
-              <option value="binance">Binance Spot</option>
-              <option value="okx">OKX Spot</option>
-            </select>
-          </label>
-          <label className="full">
             API key
             <input value={apiKey} onChange={(e) => setApiKey(e.target.value)} required autoComplete="off" />
           </label>
-          <label className="full">
+          <label>
             Secret key
             <input value={secretKey} onChange={(e) => setSecretKey(e.target.value)} required autoComplete="off" />
           </label>
           {exchange === 'okx' && (
-            <label className="full">
+            <label>
               Passphrase
               <input value={passphrase} onChange={(e) => setPassphrase(e.target.value)} required autoComplete="off" />
             </label>
           )}
-        </div>
-        {formError && <div className="banner danger">{formError}</div>}
-        <button type="submit" className="btn primary block" disabled={busy}>
-          {busy ? 'Saving…' : 'Save account'}
-        </button>
-      </form>
+          {formError && <div className="banner danger">{formError}</div>}
+          <button type="submit" className="btn primary block" disabled={busy}>
+            {busy ? 'Saving…' : 'Save account'}
+          </button>
+        </form>
+      )}
       <Toast message={toast} onClose={() => setToast(null)} />
     </div>
   )

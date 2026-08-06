@@ -9,7 +9,7 @@ import {
 } from '../storage/cache'
 import { getCredentials } from '../storage/vault'
 import { getExchange, allExchanges } from '../exchanges/registry'
-import { valueBalances } from './valuation'
+import { sumUsdt, valueBalances } from './valuation'
 
 export async function syncPublicMarkets(preferred: 'binance' | 'okx' = 'binance') {
   const ex = getExchange(preferred)
@@ -51,6 +51,17 @@ export async function syncAccount(accountId: string) {
         /* optional */
       }
     }
+
+    // Always record today's live Spot value so History matches Home (Binance + OKX).
+    const today = new Date().toISOString().slice(0, 10)
+    await cacheUpsertHistory([
+      {
+        id: `${accountId}:${today}`,
+        accountId,
+        date: today,
+        usdtValue: sumUsdt(valued),
+      },
+    ])
 
     await cacheSetSyncMeta({ accountId, lastSyncAt: Date.now(), lastError: null })
   } catch (e) {

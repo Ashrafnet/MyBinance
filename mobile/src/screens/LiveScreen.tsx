@@ -18,7 +18,7 @@ export function LiveScreen() {
   const [interval, setInterval] = useState<(typeof INTERVALS)[number]>('1h')
   const [candles, setCandles] = useState<Candle[]>([])
   const [q, setQ] = useState('')
-  const [view, setView] = useState<'cards' | 'chart'>('cards')
+  const [view, setView] = useState<'cards' | 'fav' | 'chart'>('fav')
 
   useEffect(() => {
     void (async () => {
@@ -79,9 +79,10 @@ export function LiveScreen() {
       }
       if (alive) setCandles(c)
     })()
-    if (!online) return () => {
-      alive = false
-    }
+    if (!online)
+      return () => {
+        alive = false
+      }
     const stop = startLiveCandles(exchange, selected, interval, (candle) => {
       setCandles((prev) => {
         const next = [...prev]
@@ -111,96 +112,160 @@ export function LiveScreen() {
     return list.slice(0, 80)
   }, [tickers, favorites, q])
 
+  const favList = useMemo(() => {
+    const favSet = new Set(favorites)
+    return ordered.filter((t) => favSet.has(t.symbol))
+  }, [ordered, favorites])
+
   async function onToggleFav(symbol: string) {
     setFavorites(await toggleFavorite(symbol))
   }
 
-  return (
-    <div>
-      <div className="page-head">
-        <div>
-          <p className="eyebrow">Markets</p>
-          <h2>Live prices</h2>
-        </div>
-        <div className="tabs">
-          <button type="button" className={`btn ${view === 'cards' ? 'active' : ''}`} onClick={() => setView('cards')}>
-            Cards
-          </button>
-          <button type="button" className={`btn ${view === 'chart' ? 'active' : ''}`} onClick={() => setView('chart')}>
-            Candles
-          </button>
-        </div>
-      </div>
-      <div className="live-controls">
-        <select value={exchange} onChange={(e) => setExchange(e.target.value as ExchangeId)}>
-          <option value="binance">Binance</option>
-          <option value="okx">OKX</option>
-        </select>
-        <input
-          className="grow"
-          placeholder="Search e.g. BTC"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-        />
-      </div>
-
-      {view === 'cards' && (
-        <div className="cards">
-          {ordered.map((t) => {
-            const fav = favorites.includes(t.symbol)
-            const up = t.changePct24h >= 0
-            return (
-              <div
-                key={t.symbol}
-                className={`price-card ${fav ? 'fav' : ''}`}
+  function renderTickerList(rows: TickerRow[], empty: string) {
+    return (
+      <div className="asset-list">
+        {rows.map((t) => {
+          const fav = favorites.includes(t.symbol)
+          const up = t.changePct24h >= 0
+          return (
+            <div key={t.symbol} className={`asset-row ticker-row ${fav ? 'fav' : ''}`}>
+              <button
+                type="button"
+                className="ticker-main"
                 onClick={() => {
                   setSelected(t.symbol)
                   setView('chart')
                 }}
               >
-                <div className="row" style={{ justifyContent: 'space-between' }}>
-                  <div className="sym">{t.symbol}</div>
-                  <button
-                    type="button"
-                    className="btn btn-compact"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      void onToggleFav(t.symbol)
-                    }}
-                  >
-                    {fav ? '★' : '☆'}
-                  </button>
+                <div className="asset-avatar">{t.symbol.slice(0, 1)}</div>
+                <div className="asset-main">
+                  <strong>{t.symbol}</strong>
+                  <span>Tap for chart</span>
                 </div>
-                <div className="last">{t.last}</div>
-                <div className={up ? 'up' : 'down'}>
-                  {up ? '+' : ''}
-                  {t.changePct24h.toFixed(2)}%
+                <div className="asset-values">
+                  <strong>{t.last}</strong>
+                  <span className={up ? 'up' : 'down'}>
+                    {up ? '+' : ''}
+                    {t.changePct24h.toFixed(2)}%
+                  </span>
                 </div>
-              </div>
-            )
-          })}
+              </button>
+              <button
+                type="button"
+                className={`fav-btn ${fav ? 'on' : ''}`}
+                aria-label={fav ? 'Remove favorite' : 'Add favorite'}
+                onClick={() => void onToggleFav(t.symbol)}
+              >
+                {fav ? '★' : '☆'}
+              </button>
+            </div>
+          )
+        })}
+        {rows.length === 0 && <div className="empty-card">{empty}</div>}
+      </div>
+    )
+  }
+
+  return (
+    <div className="mobile-page">
+      <div className="page-head">
+        <div>
+          <p className="eyebrow">Markets</p>
+          <h2>Live prices</h2>
         </div>
-      )}
+        <div className="tabs tabs-icons">
+          <button type="button" className={`btn ${view === 'fav' ? 'active' : ''}`} onClick={() => setView('fav')}>
+            <StarIcon filled={view === 'fav'} />
+            Favorites
+          </button>
+          <button type="button" className={`btn ${view === 'cards' ? 'active' : ''}`} onClick={() => setView('cards')}>
+            <ListIcon />
+            List
+          </button>
+          <button type="button" className={`btn ${view === 'chart' ? 'active' : ''}`} onClick={() => setView('chart')}>
+            <ChartIcon />
+            Chart
+          </button>
+        </div>
+      </div>
+
+      <div className="chip-row">
+        <select className="chip-select" value={exchange} onChange={(e) => setExchange(e.target.value as ExchangeId)}>
+          <option value="binance">Binance</option>
+          <option value="okx">OKX</option>
+        </select>
+        <input
+          className="search-pill"
+          placeholder="Search BTC…"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+        />
+      </div>
+
+      {view === 'cards' &&
+        renderTickerList(ordered, 'No tickers yet. Connect online to load markets.')}
+
+      {view === 'fav' &&
+        renderTickerList(favList, 'No favorites yet. Tap ★ on a coin in List or Chart.')}
 
       {view === 'chart' && (
-        <div className="panel">
-          <div className="row filters" style={{ marginBottom: 10 }}>
-            <strong style={{ flex: '1 1 auto' }}>{selected}</strong>
+        <div className="panel chart-panel">
+          <div className="section-head">
+            <h3>{selected}</h3>
             <button type="button" className="btn btn-compact" onClick={() => void onToggleFav(selected)}>
-              {favorites.includes(selected) ? 'Unfavorite' : 'Favorite'}
+              {favorites.includes(selected) ? '★ Fav' : '☆ Fav'}
             </button>
-            <select value={interval} onChange={(e) => setInterval(e.target.value as (typeof INTERVALS)[number])}>
-              {INTERVALS.map((i) => (
-                <option key={i} value={i}>
-                  {i === '4h' ? '4H' : i}
-                </option>
-              ))}
-            </select>
+          </div>
+          <div className="interval-row">
+            {INTERVALS.map((i) => (
+              <button
+                key={i}
+                type="button"
+                className={`interval-chip ${interval === i ? 'active' : ''}`}
+                onClick={() => setInterval(i)}
+              >
+                {i === '4h' ? '4H' : i}
+              </button>
+            ))}
           </div>
           <CandleChart candles={candles} />
-          {!online && <p className="muted">Offline — showing cached candles.</p>}
+          {!online && <p className="muted tight">Offline — showing cached candles.</p>}
         </div>
       )}
     </div>
+  )
+}
+
+function StarIcon({ filled }: { filled?: boolean }) {
+  return (
+    <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+      <path
+        d="M12 3.6 14.4 9l5.9.5-4.5 3.8 1.4 5.7L12 16.2 6.8 19l1.4-5.7L3.7 9.5 9.6 9 12 3.6Z"
+        fill={filled ? 'currentColor' : 'none'}
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+function ListIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+      <path d="M8 7h12M8 12h12M8 17h12" strokeLinecap="round" />
+      <circle cx="4.5" cy="7" r="1.2" fill="currentColor" stroke="none" />
+      <circle cx="4.5" cy="12" r="1.2" fill="currentColor" stroke="none" />
+      <circle cx="4.5" cy="17" r="1.2" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
+function ChartIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+      <path d="M4 19V5M4 19h16" strokeLinecap="round" />
+      <path d="M8 15v-4M12 15V8M16 15v-6" strokeLinecap="round" />
+    </svg>
   )
 }

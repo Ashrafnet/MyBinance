@@ -1,7 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { useAuth } from './AuthContext'
 import { UnlockScreen } from '../screens/UnlockScreen'
-import { ShellLayout } from '../screens/ShellLayout'
+import { MoreScreen, ShellLayout } from '../screens/ShellLayout'
 import { PortfolioScreen } from '../screens/PortfolioScreen'
 import { AccountsScreen } from '../screens/AccountsScreen'
 import { OrdersScreen } from '../screens/OrdersScreen'
@@ -36,6 +36,7 @@ export function AppRoutes() {
         <Route path="history" element={<HistoryScreen />} />
         <Route path="summary" element={<SummaryScreen />} />
         <Route path="settings" element={<SettingsScreen />} />
+        <Route path="more" element={<MoreScreen />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

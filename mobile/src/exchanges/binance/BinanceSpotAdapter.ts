@@ -7,6 +7,7 @@ import type {
   PlaceOrderRequest,
   TickerRow,
 } from '../../domain/types'
+import { sumUsdt, valueBalances } from '../../services/valuation'
 import { restBase, wsPublic } from '../endpoints'
 import { httpRequest } from '../http'
 import type { IExchange } from '../types'
@@ -163,23 +164,48 @@ export class BinanceSpotAdapter implements IExchange {
     const start = end - 30 * 24 * 60 * 60 * 1000
     try {
       const data = await signedRequest<{
-        snapshotVos?: Array<{ updateTime: number; data: { totalAssetOfBtc: string } }>
+        code?: number
+        snapshotVos?: Array<{
+          updateTime: number
+          data: {
+            totalAssetOfBtc?: string
+            balances?: Array<{ asset: string; free: string; locked: string }>
+          }
+        }>
       }>(creds, 'GET', '/sapi/v1/accountSnapshot', {
         type: 'SPOT',
         startTime: start,
         endTime: end,
         limit: 30,
       })
+      // Binance sometimes returns HTTP 200 with code != 200 in the body.
+      if (data.code != null && data.code !== 200) return []
+
       const tickers = await this.fetchTickers()
-      const btcUsdt = tickers.find((t) => t.symbol === 'BTCUSDT')?.last ?? 0
       return (data.snapshotVos ?? []).map((s) => {
-        const btc = Number(s.data.totalAssetOfBtc)
         const date = new Date(s.updateTime).toISOString().slice(0, 10)
+        const raw = (s.data.balances ?? [])
+          .map((b) => {
+            const free = Number(b.free)
+            const locked = Number(b.locked)
+            const total = free + locked
+            return { asset: b.asset, free, locked, total, usdtValue: 0, btcValue: 0 }
+          })
+          .filter((b) => b.total > 0)
+
+        // Match desktop app: value snapshot balances with market prices.
+        // Fall back to totalAssetOfBtc only when balances are missing.
+        let usdtValue = sumUsdt(valueBalances(raw, tickers))
+        if (usdtValue <= 0 && s.data.totalAssetOfBtc) {
+          const btcUsdt = tickers.find((t) => t.symbol === 'BTCUSDT')?.last ?? 0
+          usdtValue = Number(s.data.totalAssetOfBtc) * btcUsdt
+        }
+
         return {
           id: `${accountId}:${date}`,
           accountId,
           date,
-          usdtValue: btc * btcUsdt,
+          usdtValue,
         }
       })
     } catch {
