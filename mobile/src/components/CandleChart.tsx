@@ -20,22 +20,22 @@ export function CandleChart({ candles }: { candles: Candle[] }) {
     const chart = createChart(el, {
       layout: {
         background: { color: 'transparent' },
-        textColor: '#64748b',
+        textColor: '#8b93a7',
       },
       grid: {
-        vertLines: { color: 'rgba(15,23,42,0.05)' },
-        horzLines: { color: 'rgba(15,23,42,0.05)' },
+        vertLines: { color: 'rgba(11,18,32,0.05)' },
+        horzLines: { color: 'rgba(11,18,32,0.05)' },
       },
       width: el.clientWidth,
       height: Math.max(220, el.clientHeight || 320),
       autoSize: false,
     })
     const series = chart.addSeries(CandlestickSeries, {
-      upColor: '#047857',
-      downColor: '#b91c1c',
+      upColor: '#16c784',
+      downColor: '#ea3943',
       borderVisible: false,
-      wickUpColor: '#047857',
-      wickDownColor: '#b91c1c',
+      wickUpColor: '#16c784',
+      wickDownColor: '#ea3943',
     })
     chartRef.current = chart
     seriesRef.current = series

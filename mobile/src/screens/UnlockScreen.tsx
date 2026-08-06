@@ -36,14 +36,14 @@ export function UnlockScreen() {
   return (
     <div className="unlock">
       <div className="unlock-card">
-        <p className="eyebrow">Private Spot portfolio</p>
+        <p className="eyebrow">Crypto trading desk</p>
         <h1 className="brand">
           My<span>Exchanges</span>
         </h1>
         <p className="unlock-lead">
           {auth.initialized
-            ? 'A calm place for your Binance and OKX balances — encrypted on this device only.'
-            : 'Create a recovery PIN to protect your keys. Next time, unlock with your fingerprint.'}
+            ? 'Track Binance and OKX Spot balances, orders, and markets — encrypted on this device.'
+            : 'Create a recovery PIN to protect your API keys. Next time, unlock with fingerprint.'}
         </p>
         <div className="unlock-meta">
           <span className="stamp hot">Binance</span>

@@ -192,7 +192,7 @@ export function LiveScreen() {
             <select value={interval} onChange={(e) => setInterval(e.target.value as (typeof INTERVALS)[number])}>
               {INTERVALS.map((i) => (
                 <option key={i} value={i}>
-                  {i}
+                  {i === '4h' ? '4H' : i}
                 </option>
               ))}
             </select>
