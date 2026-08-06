@@ -1,6 +1,6 @@
 import type { TickerRow } from '../domain/types'
 
-export type MarketCategory = 'trending' | 'gainers' | 'losers'
+export type MarketCategory = 'list' | 'trending' | 'gainers' | 'losers'
 
 function finiteChange(t: TickerRow) {
   return Number.isFinite(t.changePct24h)
@@ -25,6 +25,9 @@ export function rankTickers(
 ): TickerRow[] {
   const list = usdtPairs(tickers)
   switch (category) {
+    case 'list':
+      list.sort((a, b) => symbolBase(a.symbol).localeCompare(symbolBase(b.symbol)))
+      break
     case 'gainers':
       list.sort((a, b) => b.changePct24h - a.changePct24h)
       break

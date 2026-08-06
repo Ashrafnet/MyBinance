@@ -574,13 +574,13 @@ html[data-theme="light"] .search-pill {
   padding: 0 8px;
   color: var(--ink);
   cursor: pointer;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
-  transition: box-shadow 160ms ease, border-color 160ms ease, transform 160ms ease;
+  box-shadow: none;
+  transition: border-color 160ms ease, background 160ms ease;
 }
 
 html[data-theme="light"] .app-select-trigger {
   background: #ffffff;
-  box-shadow: 0 8px 20px rgba(16, 24, 40, 0.06);
+  box-shadow: none;
 }
 
 .app-select.field .app-select-trigger {
@@ -597,22 +597,26 @@ html[data-theme="light"] .app-select.field .app-select-trigger {
 
 .app-select.open .app-select-trigger,
 .app-select-trigger:hover {
-  border-color: rgba(47, 125, 246, 0.4);
-  box-shadow: 0 12px 28px rgba(47, 125, 246, 0.18);
-  transform: translateY(-1px);
+  border-color: rgba(120, 150, 220, 0.4);
+  box-shadow: none;
+  transform: none;
+  background: #161d2e;
 }
 
 .app-select.field.open .app-select-trigger,
 .app-select.field .app-select-trigger:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(47, 125, 246, 0.45);
-  box-shadow: 0 0 0 4px rgba(47, 125, 246, 0.12);
+  background: #161d2e;
+  border-color: rgba(120, 150, 220, 0.4);
+  box-shadow: none;
   transform: none;
 }
 
+html[data-theme="light"] .app-select.open .app-select-trigger,
+html[data-theme="light"] .app-select-trigger:hover,
 html[data-theme="light"] .app-select.field.open .app-select-trigger,
 html[data-theme="light"] .app-select.field .app-select-trigger:hover {
   background: #fff;
+  box-shadow: none;
 }
 
 .app-select-glyph {
@@ -622,23 +626,16 @@ html[data-theme="light"] .app-select.field .app-select-trigger:hover {
   display: grid;
   place-items: center;
   flex: 0 0 auto;
-  color: var(--blue-deep);
-  background: linear-gradient(145deg, rgba(31, 111, 214, 0.16), rgba(116, 192, 68, 0.16));
+  color: var(--ink-2);
+  background: #161d2e;
+  border: 1px solid var(--glass-border);
 }
 
-.app-select-glyph.sort {
-  color: #0f766e;
-  background: linear-gradient(145deg, rgba(15, 118, 110, 0.14), rgba(31, 111, 214, 0.1));
-}
-
-.app-select-glyph.exchange {
-  color: #b45309;
-  background: linear-gradient(145deg, rgba(243, 186, 47, 0.22), rgba(31, 111, 214, 0.1));
-}
-
+.app-select-glyph.sort,
+.app-select-glyph.exchange,
 .app-select-glyph.type {
   color: var(--ink-2);
-  background: rgba(16, 24, 40, 0.06);
+  background: #161d2e;
 }
 
 .app-select-value {
@@ -1357,9 +1354,9 @@ html[data-theme="light"] .btn {
 
 .btn.primary {
   background: var(--blue);
-  border-color: var(--blue);
+  border-color: rgba(120, 150, 220, 0.28);
   color: #fff;
-  box-shadow: 0 8px 18px rgba(31, 111, 214, 0.28);
+  box-shadow: none;
 }
 
 .btn.danger {
@@ -1376,6 +1373,18 @@ html[data-theme="light"] .btn {
 
 .btn.block {
   width: 100%;
+}
+
+.btn-with-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-with-icon svg {
+  flex: 0 0 auto;
+  display: block;
 }
 
 .confirm-backdrop {
@@ -1640,7 +1649,7 @@ input,
 select,
 textarea {
   width: 100%;
-  background: rgba(255, 255, 255, 0.06);
+  background: #121826;
   border: 1px solid var(--glass-border);
   border-radius: 14px;
   padding: 12px 14px;
@@ -1658,9 +1667,9 @@ textarea::placeholder {
 input:focus,
 select:focus,
 textarea:focus {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(47, 125, 246, 0.55);
-  box-shadow: 0 0 0 4px rgba(47, 125, 246, 0.15);
+  background: #161d2e;
+  border-color: rgba(120, 150, 220, 0.4);
+  box-shadow: none;
   outline: none;
 }
 
@@ -3642,6 +3651,11 @@ html[data-theme="light"] .chart-ohlc .ohlc-l em {
   gap: 8px;
   margin-bottom: 8px;
   min-width: 0;
+  padding: 8px;
+  border-radius: 18px;
+  border: 1px solid var(--glass-border);
+  background: #121826;
+  overflow: hidden;
 }
 
 .chart-tf-select {
@@ -3653,6 +3667,14 @@ html[data-theme="light"] .chart-ohlc .ohlc-l em {
   width: 100%;
   min-height: 36px;
   padding: 6px 10px;
+  border-radius: 999px;
+  box-shadow: none;
+}
+
+.chart-tf-select.open .app-select-trigger,
+.chart-tf-select .app-select-trigger:hover {
+  box-shadow: none;
+  transform: none;
 }
 
 .chart-tf-select .app-select-menu {
@@ -3663,7 +3685,7 @@ html[data-theme="light"] .chart-ohlc .ohlc-l em {
   display: inline-flex;
   gap: 2px;
   padding: 3px;
-  border-radius: 12px;
+  border-radius: 999px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--glass-border);
   flex: 0 0 auto;
@@ -3673,7 +3695,7 @@ html[data-theme="light"] .chart-ohlc .ohlc-l em {
   width: 32px;
   height: 28px;
   border: none;
-  border-radius: 9px;
+  border-radius: 999px;
   background: transparent;
   color: var(--grey);
   display: grid;
@@ -3685,7 +3707,7 @@ html[data-theme="light"] .chart-ohlc .ohlc-l em {
 .chart-type-btn.active {
   background: rgba(47, 125, 246, 0.22);
   color: #dce8ff;
-  box-shadow: 0 0 12px rgba(47, 125, 246, 0.28);
+  box-shadow: none;
 }
 
 html[data-theme="light"] .chart-type-seg {
@@ -4174,6 +4196,46 @@ td:first-child {
   gap: 12px;
 }
 
+.unlock-actions input,
+.unlock-actions input:focus,
+.unlock-actions input:focus-visible {
+  background: #121826;
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  box-shadow: none;
+  outline: none;
+}
+
+.unlock-actions input:focus,
+.unlock-actions input:focus-visible {
+  background: #161d2e;
+  border-color: rgba(120, 150, 220, 0.4);
+}
+
+.unlock-actions .btn.primary {
+  background: var(--blue) !important;
+  border-color: rgba(120, 150, 220, 0.28) !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="light"] .unlock-actions input,
+html[data-theme="light"] .unlock-actions input:focus,
+html[data-theme="light"] .unlock-actions input:focus-visible {
+  background: #fff;
+  border-color: var(--line);
+  box-shadow: none;
+}
+
+html[data-theme="light"] .unlock-actions input:focus,
+html[data-theme="light"] .unlock-actions input:focus-visible {
+  border-color: rgba(47, 125, 246, 0.45);
+}
+
+html[data-theme="light"] .unlock-actions .btn.primary {
+  background: var(--blue) !important;
+  box-shadow: none !important;
+}
+
 .unlock-card .brand {
   font-size: clamp(2.1rem, 8vw, 2.6rem);
   margin-bottom: 10px;
@@ -4197,13 +4259,15 @@ td:first-child {
   font-weight: 800;
   padding: 6px 10px;
   border-radius: 999px;
-  background: rgba(47, 125, 246, 0.18);
-  color: #93c5fd;
+  background: #121826;
+  border: 1px solid var(--glass-border);
+  color: var(--ink-2);
 }
 
 .stamp.hot:last-child {
-  background: rgba(116, 192, 68, 0.18);
-  color: #a3e635;
+  background: #121826;
+  border-color: var(--glass-border);
+  color: var(--ink-2);
 }
 
 html[data-theme="light"] .stamp {
@@ -4269,9 +4333,52 @@ html[data-theme="light"] .tabs {
 }
 
 .tabs .btn.active {
-  background: linear-gradient(135deg, var(--blue), var(--blue-deep)) !important;
+  background: var(--blue) !important;
   color: #fff !important;
-  box-shadow: 0 4px 14px rgba(47, 125, 246, 0.35) !important;
+  box-shadow: none !important;
+}
+
+.tabs .btn.tone-fav {
+  color: var(--green);
+}
+
+.tabs .btn.tone-fav.active {
+  background: var(--green) !important;
+  color: #fff !important;
+}
+
+.tabs .btn.tone-assets {
+  color: #5b9cf5;
+}
+
+.tabs .btn.tone-assets.active {
+  background: var(--blue) !important;
+  color: #fff !important;
+}
+
+html[data-theme="light"] .tabs .btn.tone-fav {
+  color: var(--green-deep);
+}
+
+html[data-theme="light"] .tabs .btn.tone-fav.active {
+  background: var(--green) !important;
+  color: #fff !important;
+}
+
+html[data-theme="light"] .tabs .btn.tone-assets {
+  color: var(--blue-deep);
+}
+
+.portfolio-tabs .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.portfolio-tabs .btn svg {
+  flex: 0 0 auto;
+  display: block;
 }
 
 .toast {
@@ -4329,10 +4436,10 @@ html[data-theme="light"] .tabs {
 /* ===== Dark-glass polish (no translucent remaps) ===== */
 .btn.primary,
 .btn.active.primary {
-  background: linear-gradient(135deg, var(--blue), var(--blue-deep)) !important;
+  background: var(--blue) !important;
   color: #fff !important;
-  border-color: transparent !important;
-  box-shadow: 0 8px 24px rgba(47, 125, 246, 0.35);
+  border-color: rgba(120, 150, 220, 0.28) !important;
+  box-shadow: none !important;
 }
 
 .fab-refresh {
@@ -4346,13 +4453,15 @@ html[data-theme="light"] .fab-refresh {
 }
 
 .app-select-glyph {
-  color: #93c5fd;
-  background: rgba(47, 125, 246, 0.2);
+  color: var(--ink-2);
+  background: #161d2e;
+  border: 1px solid var(--glass-border);
 }
 
 html[data-theme="light"] .app-select-glyph {
-  color: var(--blue-deep);
-  background: linear-gradient(145deg, rgba(31, 111, 214, 0.16), rgba(116, 192, 68, 0.16));
+  color: var(--ink-2);
+  background: #f3f5f8;
+  border-color: var(--line);
 }
 
 .asset-avatar {
@@ -4621,20 +4730,97 @@ html[data-theme="light"] .gainer-card {
 
 .market-pill {
   flex-shrink: 0;
-  border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid transparent;
   border-radius: 20px;
-  padding: 8px 14px;
+  padding: 8px 12px;
   font-size: 0.78rem;
   font-weight: 700;
   color: var(--grey);
-  background: rgba(127, 140, 160, 0.12);
+  background: #121826;
   cursor: pointer;
+  box-shadow: none;
+}
+
+.market-pill svg {
+  flex: 0 0 auto;
+  display: block;
+}
+
+.market-pill.tone-list {
+  color: #7eb0f5;
+  border-color: rgba(120, 150, 220, 0.22);
+}
+
+.market-pill.tone-trend {
+  color: #e0a84a;
+  border-color: rgba(224, 168, 74, 0.28);
+}
+
+.market-pill.tone-up {
+  color: #62c26a;
+  border-color: rgba(98, 194, 106, 0.28);
+}
+
+.market-pill.tone-down {
+  color: #e36b84;
+  border-color: rgba(227, 107, 132, 0.28);
 }
 
 .market-pill.active {
   color: #fff;
-  background: linear-gradient(135deg, var(--blue), var(--blue-deep));
-  box-shadow: 0 4px 16px rgba(47, 125, 246, 0.4);
+  box-shadow: none;
+}
+
+.market-pill.tone-list.active {
+  background: var(--blue);
+  border-color: rgba(120, 150, 220, 0.28);
+}
+
+.market-pill.tone-trend.active {
+  background: #c9841a;
+  border-color: rgba(201, 132, 26, 0.4);
+}
+
+.market-pill.tone-up.active {
+  background: #2f9d4a;
+  border-color: rgba(47, 157, 74, 0.4);
+}
+
+.market-pill.tone-down.active {
+  background: #c53d5a;
+  border-color: rgba(197, 61, 90, 0.4);
+}
+
+html[data-theme="light"] .market-pill {
+  background: #eef1f5;
+  border-color: transparent;
+}
+
+html[data-theme="light"] .market-pill.tone-list {
+  color: var(--blue-deep);
+  border-color: rgba(47, 125, 246, 0.18);
+  background: #fff;
+}
+
+html[data-theme="light"] .market-pill.tone-trend {
+  color: #b7791f;
+  border-color: rgba(183, 121, 31, 0.22);
+  background: #fff;
+}
+
+html[data-theme="light"] .market-pill.tone-up {
+  color: #2f7d3a;
+  border-color: rgba(47, 125, 58, 0.2);
+  background: #fff;
+}
+
+html[data-theme="light"] .market-pill.tone-down {
+  color: #b42345;
+  border-color: rgba(180, 35, 69, 0.2);
+  background: #fff;
 }
 
 .market-row-btn {
@@ -4701,8 +4887,8 @@ html[data-theme="light"] .gainer-card {
 
 .tf-pill.active {
   color: #fff;
-  background: linear-gradient(135deg, var(--blue), var(--blue-deep));
-  box-shadow: 0 4px 14px rgba(47, 125, 246, 0.35);
+  background: var(--blue);
+  box-shadow: none;
 }
 
 .detail-cta-row {
@@ -4716,6 +4902,17 @@ html[data-theme="light"] .gainer-card {
   min-height: 48px;
   border-radius: 24px;
   font-weight: 750;
+}
+
+.detail-cta-row .detail-cta-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.detail-cta-row .detail-cta-icon svg {
+  display: block;
 }
 
 .detail-price-block {
@@ -4788,14 +4985,14 @@ html[data-theme="light"] .offline-banner {
   background: #121826 !important;
   color: #f4f7ff !important;
   border: 1px solid rgba(120, 150, 220, 0.22) !important;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35) !important;
+  box-shadow: none !important;
 }
 
 html[data-theme="light"] .topbar-account .app-select-trigger {
   background: #ffffff !important;
   color: #101828 !important;
   border-color: rgba(16, 24, 40, 0.1) !important;
-  box-shadow: 0 8px 20px rgba(16, 24, 40, 0.08) !important;
+  box-shadow: none !important;
 }
 
 .topbar-account .app-select-value strong,

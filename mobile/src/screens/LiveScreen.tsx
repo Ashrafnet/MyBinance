@@ -248,7 +248,7 @@ export function LiveScreen() {
     const qq = q.trim()
     // Search across all markets — category top-N was hiding coins like TRX.
     if (qq) return searchTickers(tickers, qq, 80)
-    return rankTickers(tickers, category, 80)
+    return rankTickers(tickers, category, category === 'list' ? 400 : 80)
   }, [tickers, category, q])
 
   const favList = useMemo(() => {
@@ -579,11 +579,23 @@ export function LiveScreen() {
 
       {!fullscreen && (
         <div className="detail-cta-row">
-          <button type="button" className="btn" onClick={() => navigate('/orders')}>
-            Orders
+          <button
+            type="button"
+            className="btn detail-cta-icon"
+            aria-label="Orders"
+            title="Orders"
+            onClick={() => navigate('/orders')}
+          >
+            <OrdersCtaIcon />
           </button>
-          <button type="button" className="btn primary" onClick={() => navigate('/orders')}>
-            Trade
+          <button
+            type="button"
+            className="btn primary detail-cta-icon"
+            aria-label="Trade"
+            title="Trade"
+            onClick={() => navigate('/orders')}
+          >
+            <TradeCtaIcon />
           </button>
         </div>
       )}
@@ -631,21 +643,23 @@ export function LiveScreen() {
             <div className={`market-pills ${q.trim() ? 'searching' : ''}`}>
               {(
                 [
-                  ['trending', 'Trending'],
-                  ['gainers', 'Top Gainers'],
-                  ['losers', 'Top Losers'],
+                  ['list', 'Market list', 'tone-list'],
+                  ['trending', 'Trending', 'tone-trend'],
+                  ['gainers', 'Top Gainers', 'tone-up'],
+                  ['losers', 'Top Losers', 'tone-down'],
                 ] as const
-              ).map(([id, label]) => (
+              ).map(([id, label, tone]) => (
                 <button
                   key={id}
                   type="button"
-                  className={`market-pill ${!q.trim() && category === id ? 'active' : ''}`}
+                  className={`market-pill ${tone} ${!q.trim() && category === id ? 'active' : ''}`}
                   onClick={() => {
                     setCategory(id)
                     if (q.trim()) setQ('')
                   }}
                 >
-                  {label}
+                  <MarketCatIcon id={id} />
+                  <span>{label}</span>
                 </button>
               ))}
             </div>
@@ -691,6 +705,58 @@ function ListIcon() {
       <circle cx="4.5" cy="7" r="1.2" fill="currentColor" stroke="none" />
       <circle cx="4.5" cy="12" r="1.2" fill="currentColor" stroke="none" />
       <circle cx="4.5" cy="17" r="1.2" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
+function MarketCatIcon({ id }: { id: MarketCategory }) {
+  if (id === 'list') {
+    return (
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+        <path d="M8 7h12M8 12h12M8 17h12" strokeLinecap="round" />
+        <circle cx="4.5" cy="7" r="1.15" fill="currentColor" stroke="none" />
+        <circle cx="4.5" cy="12" r="1.15" fill="currentColor" stroke="none" />
+        <circle cx="4.5" cy="17" r="1.15" fill="currentColor" stroke="none" />
+      </svg>
+    )
+  }
+  if (id === 'trending') {
+    return (
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+        <path d="M4 16l5-5 4 4 7-8" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M14 7h6v6" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    )
+  }
+  if (id === 'gainers') {
+    return (
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+        <path d="M12 19V6M7 11l5-5 5 5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    )
+  }
+  return (
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <path d="M12 5v13M7 13l5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function OrdersCtaIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <path d="M8 7h12M8 12h12M8 17h12" strokeLinecap="round" />
+      <circle cx="4.5" cy="7" r="1.2" fill="currentColor" stroke="none" />
+      <circle cx="4.5" cy="12" r="1.2" fill="currentColor" stroke="none" />
+      <circle cx="4.5" cy="17" r="1.2" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
+function TradeCtaIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <path d="M4 7h12M16 7l-3.2-3.2M16 7l-3.2 3.2M20 17H8M8 17l3.2-3.2M8 17l3.2 3.2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }

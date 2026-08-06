@@ -473,15 +473,21 @@ export function PortfolioScreen() {
       </div>
 
       <div className="assets-section">
-        <div className="tabs tabs-stretch portfolio-tabs">
+        <div className="tabs tabs-stretch tabs-icons portfolio-tabs">
           <button
             type="button"
-            className={`btn ${tab === 'favorites' ? 'active' : ''}`}
+            className={`btn tone-fav ${tab === 'favorites' ? 'active' : ''}`}
             onClick={() => setTab('favorites')}
           >
-            My favorites
+            <PortfolioFavIcon filled={tab === 'favorites'} />
+            Favorites
           </button>
-          <button type="button" className={`btn ${tab === 'assets' ? 'active' : ''}`} onClick={() => setTab('assets')}>
+          <button
+            type="button"
+            className={`btn tone-assets ${tab === 'assets' ? 'active' : ''}`}
+            onClick={() => setTab('assets')}
+          >
+            <PortfolioAssetsIcon />
             My assets
           </button>
         </div>
@@ -601,5 +607,29 @@ export function PortfolioScreen() {
 
       <Toast message={toast} onClose={() => setToast(null)} />
     </div>
+  )
+}
+
+function PortfolioFavIcon({ filled }: { filled?: boolean }) {
+  return (
+    <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+      <path
+        d="M12 3.8l2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 16.2 7.2 18.7l.9-5.4-3.9-3.8 5.4-.8L12 3.8Z"
+        fill={filled ? 'currentColor' : 'none'}
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+function PortfolioAssetsIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+      <rect x="3" y="6" width="18" height="13" rx="2.5" />
+      <path d="M3 10h18" />
+      <circle cx="16.5" cy="14.5" r="1.2" fill="currentColor" stroke="none" />
+    </svg>
   )
 }

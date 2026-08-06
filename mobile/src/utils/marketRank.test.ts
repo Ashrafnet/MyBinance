@@ -30,6 +30,11 @@ describe('rankTickers', () => {
     expect(rows[0].symbol).toBe('ADAUSDT')
     expect(rows.map((r) => r.symbol)).not.toContain('BNBUSDT')
   })
+
+  it('ranks market list alphabetically by base', () => {
+    const rows = rankTickers(sample, 'list', 10)
+    expect(rows.map((r) => r.symbol)).toEqual(['ADAUSDT', 'BTCUSDT', 'ETHUSDT', 'SOLUSDT'])
+  })
 })
 
 describe('searchTickers', () => {
