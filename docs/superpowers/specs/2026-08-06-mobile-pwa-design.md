@@ -71,7 +71,7 @@ Exchange private REST APIs generally block browser origins (CORS). Therefore:
 | Portfolio | All or one account; balances with USDT/BTC valuation; dust filter + search; shows last-sync when offline |
 | Orders | Open orders; cancel; place market/limit buy/sell; order history (filled/cancelled) |
 | Live prices | Online: live ticker cards + candle charts. Favorites first; add/remove favorites. Offline: last cached prices/candles |
-| Account history | Value-over-time from each exchange’s closest Spot snapshot/bills API (Binance daily snapshot; OKX equivalent aggregation — not required to be identical endpoints) |
+| Account history | Value-over-time from each exchange's closest Spot snapshot/bills API (Binance daily snapshot; OKX equivalent aggregation - not required to be identical endpoints) |
 | Summary | Compact total portfolio + BTC (desktop notify-window equivalent) |
 | Settings | Auto-refresh interval, dust threshold, notification prefs, clear cache, encrypted backup export/import |
 
