@@ -18,6 +18,8 @@ type AuthState = {
   unlockPin: (pin: string) => Promise<void>
   unlockBiometric: () => Promise<boolean>
   lock: () => void
+  /** After backup import: treat vault as initialized and force the unlock screen. */
+  requireUnlock: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthState | null>(null)
@@ -65,6 +67,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUnlocked(false)
   }, [])
 
+  const requireUnlock = useCallback(async () => {
+    lockVault()
+    setInitialized(await isVaultInitialized())
+    setUnlocked(false)
+  }, [])
+
   const value = useMemo(
     () => ({
       ready,
@@ -75,8 +83,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       unlockPin,
       unlockBiometric,
       lock,
+      requireUnlock,
     }),
-    [ready, initialized, unlocked, biometricAvailable, setupPin, unlockPin, unlockBiometric, lock],
+    [ready, initialized, unlocked, biometricAvailable, setupPin, unlockPin, unlockBiometric, lock, requireUnlock],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

@@ -1,7 +1,13 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../app/AuthContext'
 import { getStoredTheme, subscribeTheme, toggleTheme, type Theme } from '../app/theme'
+
+type UnlockLocationState = {
+  fromImport?: boolean
+  accountCount?: number
+  legacyBackup?: boolean
+}
 
 function LockIcon() {
   return (
@@ -35,6 +41,9 @@ function ArrowRightIcon() {
 
 export function UnlockScreen() {
   const auth = useAuth()
+  const location = useLocation()
+  const importState = (location.state as UnlockLocationState | null) ?? null
+  const fromImport = Boolean(importState?.fromImport)
   const [pin, setPin] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -52,8 +61,12 @@ export function UnlockScreen() {
     try {
       if (!auth.initialized) await auth.setupPin(pin)
       else await auth.unlockPin(pin)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not unlock')
+    } catch {
+      setError(
+        fromImport
+          ? 'Wrong PIN for this backup. Use the recovery PIN from the device that created the export.'
+          : 'Could not unlock — check your recovery PIN.',
+      )
     } finally {
       setBusy(false)
     }
@@ -74,12 +87,19 @@ export function UnlockScreen() {
     }
   }
 
+  const accountCount = importState?.accountCount ?? 0
+  const importLead = importState?.legacyBackup
+    ? 'Backup restored, but this older file had no account list. Enter your recovery PIN, then add accounts again (keys may still be in the vault).'
+    : accountCount > 0
+      ? `Backup restored with ${accountCount} account${accountCount === 1 ? '' : 's'}. Enter the recovery PIN you used when you exported — then you can sync.`
+      : 'Backup restored. Enter the recovery PIN you used when you exported.'
+
   return (
     <div className="phone-stage">
       <div className="phone-shell unlock unlock-fullscreen">
         <div className="unlock-card">
           <div className="unlock-top">
-            <p className="eyebrow">Spot trading</p>
+            <p className="eyebrow">{fromImport ? 'Backup restore' : 'Spot trading'}</p>
             <button
               type="button"
               className="icon-btn"
@@ -94,18 +114,27 @@ export function UnlockScreen() {
               My<span>Exchanges</span>
             </h1>
             <p className="unlock-lead">
-              {auth.initialized
-                ? 'Your Binance & OKX portfolio, orders, and markets — secured on this phone.'
-                : 'Set a recovery PIN to protect API keys. Next unlock can use fingerprint.'}
+              {fromImport
+                ? importLead
+                : auth.initialized
+                  ? 'Your Binance & OKX portfolio, orders, and markets — secured on this phone.'
+                  : 'Set a recovery PIN to protect API keys. Next unlock can use fingerprint.'}
             </p>
-            <div className="unlock-meta">
-              <span className="stamp">Binance</span>
-              <span className="stamp">OKX</span>
-              <span className="stamp hot">Offline ready</span>
-            </div>
+            {!fromImport && (
+              <div className="unlock-meta">
+                <span className="stamp">Binance</span>
+                <span className="stamp">OKX</span>
+                <span className="stamp hot">Offline ready</span>
+              </div>
+            )}
+            {fromImport && (
+              <div className="banner info unlock-import-banner">
+                Fingerprint is skipped after import — use your recovery PIN once.
+              </div>
+            )}
           </div>
           <div className="unlock-actions">
-            {auth.initialized && auth.biometricAvailable && (
+            {auth.initialized && auth.biometricAvailable && !fromImport && (
               <button
                 type="button"
                 className="btn primary block btn-with-icon"
@@ -118,7 +147,7 @@ export function UnlockScreen() {
             )}
             <form onSubmit={(e) => void onSubmit(e)}>
               <label>
-                {auth.initialized ? 'Recovery PIN' : 'Create recovery PIN'}
+                {fromImport ? 'Backup recovery PIN' : auth.initialized ? 'Recovery PIN' : 'Create recovery PIN'}
                 <input
                   type="password"
                   inputMode="numeric"
@@ -128,12 +157,13 @@ export function UnlockScreen() {
                   minLength={4}
                   required
                   placeholder="••••"
+                  autoFocus={fromImport}
                 />
               </label>
               {error && <div className="banner danger">{error}</div>}
               <button type="submit" className="btn primary block btn-with-icon" disabled={busy || pin.length < 4}>
                 {auth.initialized ? <LockIcon /> : <ArrowRightIcon />}
-                <span>{auth.initialized ? 'Unlock' : 'Get started'}</span>
+                <span>{fromImport ? 'Unlock restored backup' : auth.initialized ? 'Unlock' : 'Get started'}</span>
               </button>
             </form>
           </div>

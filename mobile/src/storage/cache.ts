@@ -11,10 +11,10 @@ import type {
 import { DEFAULT_SETTINGS } from '../domain/types'
 import { getDb } from './db'
 
+/** Clears market/portfolio caches. Keeps accounts + vault. */
 export async function cacheClearAll() {
   const db = await getDb()
   await Promise.all([
-    db.clear('accountsMeta'),
     db.clear('balances'),
     db.clear('orders'),
     db.clear('tickers'),
@@ -34,6 +34,15 @@ export async function listAccounts(): Promise<AccountMeta[]> {
 export async function upsertAccount(account: AccountMeta) {
   const db = await getDb()
   await db.put('accountsMeta', account)
+}
+
+/** Replace the full account list (used by backup import). */
+export async function replaceAllAccounts(accounts: AccountMeta[]) {
+  const db = await getDb()
+  await db.clear('accountsMeta')
+  for (const account of accounts) {
+    await db.put('accountsMeta', account)
+  }
 }
 
 export async function deleteAccountMeta(accountId: string) {
