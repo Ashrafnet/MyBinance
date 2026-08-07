@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { cacheClearAll, getSettings, saveSettings } from '../storage/cache'
 import { exportEncryptedBackup, importEncryptedBackup } from '../storage/vault'
+import { exportTextFile } from '../utils/exportFile'
 import { Toast } from '../components/Toast'
 
 export function SettingsScreen() {
@@ -30,13 +31,9 @@ export function SettingsScreen() {
   async function onExport() {
     try {
       const json = await exportEncryptedBackup()
-      const blob = new Blob([json], { type: 'application/json' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = 'myexchanges-vault-backup.json'
-      a.click()
-      URL.revokeObjectURL(url)
+      const filename = `myexchanges-vault-backup-${new Date().toISOString().slice(0, 10)}.json`
+      await exportTextFile(filename, json, 'Export encrypted vault')
+      setToast('Choose where to save or share the backup')
     } catch (e) {
       setToast(e instanceof Error ? e.message : 'Export failed')
     }
