@@ -62,9 +62,16 @@ export function UnlockScreen() {
   async function onBio() {
     setBusy(true)
     setError(null)
-    const ok = await auth.unlockBiometric()
-    if (!ok) setError('Fingerprint did not match. Try your recovery PIN.')
-    setBusy(false)
+    try {
+      const ok = await auth.unlockBiometric()
+      if (!ok) {
+        setError('Fingerprint canceled or not set up. Unlock once with your recovery PIN, then try again.')
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Fingerprint unlock failed. Use your recovery PIN.')
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (
