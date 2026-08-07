@@ -270,14 +270,29 @@ export function OrdersScreen() {
       <p className="eyebrow">Trading</p>
       <h2>Orders</h2>
 
-      <div className="tabs tabs-stretch">
-        <button type="button" className={`btn ${tab === 'open' ? 'active' : ''}`} onClick={() => setTab('open')}>
+      <div className="tabs tabs-stretch tabs-icons order-tabs">
+        <button
+          type="button"
+          className={`btn tone-open ${tab === 'open' ? 'active' : ''}`}
+          onClick={() => setTab('open')}
+        >
+          <OrderOpenIcon />
           Open
         </button>
-        <button type="button" className={`btn ${tab === 'history' ? 'active' : ''}`} onClick={() => setTab('history')}>
+        <button
+          type="button"
+          className={`btn tone-history ${tab === 'history' ? 'active' : ''}`}
+          onClick={() => setTab('history')}
+        >
+          <OrderHistoryIcon />
           History
         </button>
-        <button type="button" className={`btn ${tab === 'place' ? 'active' : ''}`} onClick={() => setTab('place')}>
+        <button
+          type="button"
+          className={`btn tone-place ${tab === 'place' ? 'active' : ''}`}
+          onClick={() => setTab('place')}
+        >
+          <OrderPlaceIcon />
           Place
         </button>
       </div>
@@ -609,6 +624,34 @@ function formatQty(n: number) {
 function shortOrderId(id: string) {
   const raw = id.includes(':') ? id.split(':').pop()! : id
   return raw.length > 18 ? `${raw.slice(0, 10)}…${raw.slice(-6)}` : raw
+}
+
+function OrderOpenIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+      <path d="M8 7h12M8 12h12M8 17h12" strokeLinecap="round" />
+      <circle cx="4.5" cy="7" r="1.15" fill="currentColor" stroke="none" />
+      <circle cx="4.5" cy="12" r="1.15" fill="currentColor" stroke="none" />
+      <circle cx="4.5" cy="17" r="1.15" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
+function OrderHistoryIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+      <circle cx="12" cy="12" r="8" />
+      <path d="M12 8v5l3 2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function OrderPlaceIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+      <path d="M4 7h12M16 7l-3.2-3.2M16 7l-3.2 3.2M20 17H8M8 17l3.2-3.2M8 17l3.2 3.2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
 }
 
 function BuyIcon() {

@@ -23,6 +23,12 @@ html[data-theme="dark"] {
   --tabbar-bg: rgba(14, 18, 30, 0.82);
   --stage-bg: #0a0c12;
   --purple-wash: rgba(107, 92, 255, 0.18);
+  --chart-controls-bg: #121826;
+  --chart-controls-border: var(--glass-border);
+  --chart-control-surface: transparent;
+  --chart-control-surface-hover: rgba(255, 255, 255, 0.06);
+  --chart-control-active-bg: rgba(47, 125, 246, 0.22);
+  --chart-control-active-ink: #dce8ff;
 
   --radius: 20px;
   --radius-sm: 14px;
@@ -65,6 +71,12 @@ html[data-theme="light"] {
   --stage-bg: #e8edf5;
   --purple-wash: rgba(116, 192, 68, 0.1);
   --shadow: 0 12px 36px rgba(16, 24, 40, 0.12);
+  --chart-controls-bg: transparent;
+  --chart-controls-border: transparent;
+  --chart-control-surface: #ffffff;
+  --chart-control-surface-hover: #f7f9fc;
+  --chart-control-active-bg: #ffffff;
+  --chart-control-active-ink: var(--blue-deep);
 }
 
 *,
@@ -3645,55 +3657,88 @@ html[data-theme="light"] .chart-ohlc .ohlc-l em {
   color: var(--down);
 }
 
+/* Chart TF + type row — theme tokens (no hardcoded dark shell in light). */
 .chart-controls {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 8px;
+  margin: 0 0 10px;
   min-width: 0;
-  padding: 8px;
-  border-radius: 18px;
-  border: 1px solid var(--glass-border);
-  background: #121826;
+  padding: 0;
+  border-radius: 0;
+  border: none;
+  background: var(--chart-controls-bg);
+  box-shadow: none;
+  overflow: visible;
+}
+
+.chart-controls .chart-tf-select,
+.chart-controls .app-select.chart-tf-select {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.chart-controls .chart-tf-select .app-select-trigger {
+  width: 100%;
+  height: 44px !important;
+  min-height: 44px !important;
+  padding: 0 10px !important;
+  border-radius: 999px !important;
+  box-shadow: none !important;
+  background: var(--chart-control-surface) !important;
+  border: 1px solid var(--chart-controls-border) !important;
+  color: var(--ink) !important;
+  transform: none !important;
+}
+
+html[data-theme="dark"] .chart-controls {
+  padding: 4px;
+  border-radius: 999px;
+  border: 1px solid var(--chart-controls-border);
+  background: var(--chart-controls-bg);
   overflow: hidden;
 }
 
-.chart-tf-select {
-  flex: 1 1 auto;
-  min-width: 0;
+html[data-theme="dark"] .chart-controls .chart-tf-select .app-select-trigger {
+  background: transparent !important;
+  border-color: transparent !important;
 }
 
-.chart-tf-select .app-select-trigger {
-  width: 100%;
-  min-height: 36px;
-  padding: 6px 10px;
-  border-radius: 999px;
-  box-shadow: none;
+.chart-controls .chart-tf-select.open .app-select-trigger,
+.chart-controls .chart-tf-select .app-select-trigger:hover {
+  box-shadow: none !important;
+  transform: none !important;
+  background: var(--chart-control-surface-hover) !important;
 }
 
-.chart-tf-select.open .app-select-trigger,
-.chart-tf-select .app-select-trigger:hover {
-  box-shadow: none;
-  transform: none;
-}
-
-.chart-tf-select .app-select-menu {
+.chart-controls .chart-tf-select .app-select-menu {
   min-width: 100%;
 }
 
-.chart-type-seg {
+.chart-controls .chart-type-seg {
   display: inline-flex;
+  align-items: center;
   gap: 2px;
-  padding: 3px;
+  height: 44px;
+  min-height: 44px;
+  padding: 4px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--glass-border);
+  background: var(--chart-control-surface);
+  border: 1px solid var(--chart-controls-border);
   flex: 0 0 auto;
+  box-sizing: border-box;
 }
 
-.chart-type-btn {
-  width: 32px;
-  height: 28px;
+html[data-theme="dark"] .chart-controls .chart-type-seg {
+  background: transparent;
+  border-color: transparent;
+}
+
+.chart-controls .chart-type-btn {
+  width: 36px;
+  height: 36px;
   border: none;
   border-radius: 999px;
   background: transparent;
@@ -3704,21 +3749,21 @@ html[data-theme="light"] .chart-ohlc .ohlc-l em {
   padding: 0;
 }
 
-.chart-type-btn.active {
-  background: rgba(47, 125, 246, 0.22);
-  color: #dce8ff;
-  box-shadow: none;
+.chart-controls .chart-type-btn.active {
+  background: var(--chart-control-active-bg) !important;
+  color: var(--chart-control-active-ink) !important;
+  box-shadow: none !important;
 }
 
-html[data-theme="light"] .chart-type-seg {
-  background: #eef1f5;
-  border-color: transparent;
+html[data-theme="light"] .chart-controls .chart-tf-select .app-select-trigger,
+html[data-theme="light"] .chart-controls .chart-type-seg {
+  border-color: var(--line) !important;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
 }
 
-html[data-theme="light"] .chart-type-btn.active {
-  background: #fff;
-  color: var(--blue-deep);
-  box-shadow: 0 2px 8px rgba(16, 24, 40, 0.08);
+html[data-theme="light"] .chart-controls .chart-type-btn.active {
+  background: rgba(47, 125, 246, 0.12) !important;
+  color: var(--blue-deep) !important;
 }
 
 .chart-ind-panel {
@@ -3869,12 +3914,12 @@ html[data-theme="light"] .chart-ind-chip.on {
     flex-wrap: wrap;
   }
 
-  .chart-type-seg {
+  .chart-controls .chart-type-seg {
     width: 100%;
     justify-content: space-between;
   }
 
-  .chart-type-btn {
+  .chart-controls .chart-type-btn {
     flex: 1 1 auto;
   }
 }
@@ -4379,6 +4424,57 @@ html[data-theme="light"] .tabs .btn.tone-assets {
 .portfolio-tabs .btn svg {
   flex: 0 0 auto;
   display: block;
+}
+
+.order-tabs .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.order-tabs .btn svg {
+  flex: 0 0 auto;
+  display: block;
+}
+
+.tabs .btn.tone-open {
+  color: var(--blue);
+}
+
+.tabs .btn.tone-open.active {
+  background: var(--blue) !important;
+  color: #fff !important;
+}
+
+.tabs .btn.tone-history {
+  color: var(--ink-2);
+}
+
+.tabs .btn.tone-history.active {
+  background: var(--blue-deep) !important;
+  color: #fff !important;
+}
+
+.tabs .btn.tone-place {
+  color: var(--green);
+}
+
+.tabs .btn.tone-place.active {
+  background: var(--green) !important;
+  color: #fff !important;
+}
+
+html[data-theme="light"] .tabs .btn.tone-open {
+  color: var(--blue-deep);
+}
+
+html[data-theme="light"] .tabs .btn.tone-history {
+  color: var(--ink-2);
+}
+
+html[data-theme="light"] .tabs .btn.tone-place {
+  color: var(--green-deep);
 }
 
 .toast {
@@ -5064,9 +5160,7 @@ html[data-theme="light"] .app-select-menu.portaled.topbar-account-select .app-se
 }
 
 /* Catch remaining light-only surfaces in dark mode */
-html:not([data-theme="light"]) .chart-type-seg,
 html:not([data-theme="light"]) .chart-ind-panel,
-html:not([data-theme="light"]) .chart-controls,
 html:not([data-theme="light"]) .order-detail-grid > div,
 html:not([data-theme="light"]) .order-meta-block > div,
 html:not([data-theme="light"]) .history-card,
