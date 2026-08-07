@@ -32,21 +32,19 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v4
 
-      - name: Ensure Android debug keystore
+      - name: Create signing keystore
         run: |
           mkdir -p "$HOME/.android"
-          KS="$HOME/.android/debug.keystore"
-          if [ ! -f "$KS" ]; then
-            keytool -genkeypair -v \
-              -keystore "$KS" \
-              -storepass android \
-              -alias androiddebugkey \
-              -keypass android \
-              -keyalg RSA \
-              -keysize 2048 \
-              -validity 10000 \
-              -dname "CN=Android Debug,O=Android,C=US"
-          fi
+          KS="$HOME/.android/myexchanges.keystore"
+          keytool -genkeypair -v \
+            -keystore "$KS" \
+            -storepass android \
+            -alias myexchanges \
+            -keypass android \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=MyExchanges,O=MyExchanges,C=US"
 
       - name: Install npm deps
         run: npm install --no-fund --no-audit
@@ -63,27 +61,56 @@ jobs:
         working-directory: mobile/android
         run: ./gradlew assembleDebug --no-daemon
 
-      - name: Sign + verify APK
+      - name: Clean, align, sign (phone-safe)
         run: |
           set -euo pipefail
-          APK="android/app/build/outputs/apk/debug/app-debug.apk"
-          OUT="android/app/build/outputs/apk/debug/MyExchanges-debug.apk"
+          SRC="android/app/build/outputs/apk/debug/app-debug.apk"
+          CLEAN="android/app/build/outputs/apk/debug/clean.apk"
+          ALIGNED="android/app/build/outputs/apk/debug/aligned.apk"
+          OUT="android/app/build/outputs/apk/debug/MyExchanges.apk"
           BUILD_TOOLS="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)"
-          KS="$HOME/.android/debug.keystore"
-          "$BUILD_TOOLS/zipalign" -f -p 4 "$APK" "$OUT.aligned"
+          KS="$HOME/.android/myexchanges.keystore"
+
+          # Strip Linux/POSIX zip extras that cause "problem parsing the package" on many phones.
+          python3 - <<'PY'
+          import zipfile
+          from pathlib import Path
+          src = Path("android/app/build/outputs/apk/debug/app-debug.apk")
+          dst = Path("android/app/build/outputs/apk/debug/clean.apk")
+          with zipfile.ZipFile(src, "r") as zin, zipfile.ZipFile(dst, "w") as zout:
+              for info in zin.infolist():
+                  data = zin.read(info.filename)
+                  clean = zipfile.ZipInfo(filename=info.filename)
+                  clean.date_time = info.date_time or (1980, 1, 1, 0, 0, 0)
+                  clean.compress_type = info.compress_type
+                  clean.create_system = 0  # DOS/Windows
+                  clean.external_attr = 0
+                  clean.extra = b""
+                  # Keep resources.arsc / .so uncompressed when already stored
+                  zout.writestr(clean, data, compress_type=info.compress_type)
+          print("cleaned", src.stat().st_size, "->", dst.stat().st_size)
+          PY
+
+          "$BUILD_TOOLS/zipalign" -f -p 4 "$CLEAN" "$ALIGNED"
           "$BUILD_TOOLS/apksigner" sign \
+            --v1-signing-enabled true \
+            --v2-signing-enabled true \
+            --v3-signing-enabled true \
             --ks "$KS" \
             --ks-pass pass:android \
             --key-pass pass:android \
-            --ks-key-alias androiddebugkey \
+            --ks-key-alias myexchanges \
             --out "$OUT" \
-            "$OUT.aligned"
+            "$ALIGNED"
           "$BUILD_TOOLS/apksigner" verify --verbose "$OUT"
+          sha256sum "$OUT" | tee android/app/build/outputs/apk/debug/MyExchanges.apk.sha256
           ls -lh "$OUT"
 
       - name: Upload APK
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
-          name: MyExchanges-debug
-          path: mobile/android/app/build/outputs/apk/debug/MyExchanges-debug.apk
+          name: MyExchanges-apk
+          path: |
+            mobile/android/app/build/outputs/apk/debug/MyExchanges.apk
+            mobile/android/app/build/outputs/apk/debug/MyExchanges.apk.sha256
           if-no-files-found: error
