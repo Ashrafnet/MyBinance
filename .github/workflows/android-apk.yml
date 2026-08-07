@@ -32,20 +32,6 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v4
 
-      - name: Create signing keystore
-        run: |
-          mkdir -p "$HOME/.android"
-          KS="$HOME/.android/myexchanges.keystore"
-          keytool -genkeypair -v \
-            -keystore "$KS" \
-            -storepass android \
-            -alias myexchanges \
-            -keypass android \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000 \
-            -dname "CN=MyExchanges,O=MyExchanges,C=US"
-
       - name: Install npm deps
         run: npm install --no-fund --no-audit
 
@@ -59,9 +45,12 @@ jobs:
 
       - name: Build debug APK
         working-directory: mobile/android
-        run: ./gradlew assembleDebug --no-daemon
+        run: |
+          ./gradlew assembleDebug --no-daemon \
+            -PVERSION_CODE=${{ github.run_number }} \
+            -PVERSION_NAME=1.0.${{ github.run_number }}
 
-      - name: Clean, align, sign (phone-safe)
+      - name: Clean, align, sign (stable key — updatable installs)
         run: |
           set -euo pipefail
           SRC="android/app/build/outputs/apk/debug/app-debug.apk"
@@ -69,7 +58,9 @@ jobs:
           ALIGNED="android/app/build/outputs/apk/debug/aligned.apk"
           OUT="android/app/build/outputs/apk/debug/MyExchanges.apk"
           BUILD_TOOLS="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)"
-          KS="$HOME/.android/myexchanges.keystore"
+          KS="android/keystore/myexchanges.keystore"
+
+          test -f "$KS"
 
           # Strip Linux/POSIX zip extras that cause "problem parsing the package" on many phones.
           python3 - <<'PY'
@@ -86,7 +77,6 @@ jobs:
                   clean.create_system = 0  # DOS/Windows
                   clean.external_attr = 0
                   clean.extra = b""
-                  # Keep resources.arsc / .so uncompressed when already stored
                   zout.writestr(clean, data, compress_type=info.compress_type)
           print("cleaned", src.stat().st_size, "->", dst.stat().st_size)
           PY
