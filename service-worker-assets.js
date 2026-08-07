@@ -253,7 +253,7 @@
       "url": "_framework\/WebSocket4Net.dll"
     },
     {
-      "hash": "sha256-t0LPDU\/JniMvhxHO6SI7UTB2o3XhZJQwlkV0pP+leLw=",
+      "hash": "sha256-4Srqq+krh1DOqAZQKiwiiI88+mw1EoIsK7aUY\/CFfOE=",
       "url": "_framework\/MyBinance.dll"
     },
     {
@@ -489,7 +489,7 @@
       "url": "_framework\/System.Private.CoreLib.dll"
     },
     {
-      "hash": "sha256-dx8zMOZ\/E\/iUEVIApJRc47AeGkV5FpHo3K40hy\/\/OtY=",
+      "hash": "sha256-0wAygqSPsCJ6HHxBKa4XIG3wBcQHoD8TVpqnt\/HDsfY=",
       "url": "_framework\/blazor.boot.json"
     },
     {
@@ -497,5 +497,5 @@
       "url": "_framework\/blazor.webassembly.js"
     }
   ],
-  "version": "7+WRXjyL"
+  "version": "+F+1hHbN"
 };
